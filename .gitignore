@@ -1,0 +1,8 @@
+vendor/
+.vscode/
+.idea/
+.DS_Store
+.envrc
+
+# Go workspace file
+go.work
