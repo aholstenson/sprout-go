@@ -15,6 +15,8 @@ jobs:
         with:
           go-version: '1.20'
       - uses: golangci/golangci-lint-action@v3
+        with:
+          args: --timeout 3m --verbose
 
   test:
     runs-on: ubuntu-latest
