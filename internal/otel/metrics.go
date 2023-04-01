@@ -25,7 +25,10 @@ func setupMetrics(service ServiceInfo, resource *resource.Resource, lifecycle fx
 		return nil, err
 	}
 
-	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter)))
+	provider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter)),
+		sdkmetric.WithResource(resource),
+	)
 	lifecycle.Append(fx.Hook{
 		OnStop: func(ctx context.Context) error {
 			return provider.Shutdown(ctx)
