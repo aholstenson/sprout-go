@@ -38,18 +38,18 @@ func New(name string, version string) *Sprout {
 
 // With lets you specify Fx options to be used when creating the application.
 func (s *Sprout) With(options ...fx.Option) *fx.App {
+	logger := s.logger
 	coreModules := []fx.Option{
-		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
-			return &fxevent.ZapLogger{Logger: log.Named("fx")}
+		fx.WithLogger(func() fxevent.Logger {
+			return &fxevent.ZapLogger{Logger: logger.Named("fx")}
 		}),
-		fx.Supply(s.logger),
 		fx.Supply(internal.ServiceInfo{
 			Name:        s.name,
 			Version:     s.version,
 			Development: internal.CheckIfDevelopment(),
 			Testing:     false,
 		}),
-		logging.Module,
+		logging.Module(logger),
 		otel.Module,
 		health.Module,
 	}

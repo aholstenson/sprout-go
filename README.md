@@ -43,8 +43,8 @@ type Config struct {
 
 var Module = fx.Module(
   "example",
-  fx.Provide(sprout.Config("", &Config{})),
-  fx.Provide(sprout.Logger("example")),
+  fx.Provide(sprout.Config("", &Config{}), fx.Private),
+  fx.Provide(sprout.Logger("example"), fx.Private),
   fx.Invoke(func(cfg *Config, logger *logr.Logger) {
     logger.Info("Hello", "name", cfg.Name)
   })
@@ -69,7 +69,7 @@ type Config struct {
 
 var Module = fx.Module(
   "example",
-  fx.Provide(sprout.Config("", &Config{})),
+  fx.Provide(sprout.Config("", &Config{}), fx.Private),
   fx.Invoke(func(cfg *Config) {
     // Config is now available for use with Fx
   })
@@ -78,25 +78,37 @@ var Module = fx.Module(
 
 ## Logging
 
-Sprout provides logging via [Logr](https://github.com/go-logr/logr). Sprout
-will automatically configure logging based on if the application is running
-in development or production mode. In development mode, logs are pretty printed
-to stderr. In production mode, logs are formatted as JSON and sent to
-stderr.
+Sprout provides logging via [Zap](https://github.com/uber-go/zap) and
+[Logr](https://github.com/go-logr/logr). Sprout will automatically configure 
+logging based on if the application is running in development or production
+mode. In development mode, logs are pretty printed to stderr. In production
+mode, logs are formatted as JSON and sent to stderr.
 
 `sprout.Logger` will create a function that returns a logger, which can be used
-with `fx.Decorate` to create a logger for a certain module.
+with `fx.Provide` to create a `*zap.Logger` for a certain module. It is
+recommended to use the `fx.Private` option to make the logger private to the
+module.
 
 Example:
 
 ```go
 var Module = fx.Module(
   "example",
-  fx.Decorate(sprout.Logger("example")),
+  fx.Provide(sprout.Logger("example"), fx.Private),
   fx.Invoke(func(logger *logr.Logger) {
     // Logger is now available for use with Fx
   })
 )
+```
+
+Variants of `sprout.Logger` are also available to create a `*zap.SugaredLogger`
+or a `logr.Logger`.
+
+Example:
+  
+```go
+fx.Provide(sprout.SugaredLogger("example"), fx.Private)
+fx.Provide(sprout.LogrLogger("example"), fx.Private)
 ```
 
 ## Observability
@@ -130,7 +142,7 @@ Collector instance.
 ```go
 var Module = fx.Module(
   "example",
-  fx.Provide(sprout.Tracer("example")),
+  fx.Provide(sprout.Tracer("example"), fx.Private),
   fx.Invoke(func(tracer *trace.Tracer) {
     // Tracer is now available for use with Fx
   })
@@ -148,7 +160,7 @@ Collector instance.
 ```go
 var Module = fx.Module(
   "example",
-  fx.Provide(sprout.Meter("example")),
+  fx.Provide(sprout.Meter("example"), fx.Private),
   fx.Invoke(func(meter *otel.Meter) {
     // Meter is now available for use with Fx
   })

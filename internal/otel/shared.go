@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	"github.com/levelfourab/sprout-go/internal/logging"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -12,8 +13,8 @@ import (
 
 var Module = fx.Module(
 	"sprout:otel",
+	fx.Provide(logging.LogrLogger("otel"), fx.Private),
 	fx.Invoke(func(logger logr.Logger) {
-		logger = logger.WithName("otel")
 		otel.SetLogger(logger)
 
 		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {

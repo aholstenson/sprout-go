@@ -18,8 +18,7 @@ var _ = Describe("Health", func() {
 	It("server can be started", func() {
 		app := fxtest.New(
 			GinkgoT(),
-			fx.Supply(zaptest.NewLogger(GinkgoT())),
-			logging.Module,
+			logging.Module(zaptest.NewLogger(GinkgoT())),
 			health.Module,
 		)
 		app.RequireStart()
@@ -40,8 +39,7 @@ var _ = Describe("Health", func() {
 		t.Setenv("HEALTH_SERVER_PORT", "8089")
 		app := fxtest.New(
 			t,
-			fx.Supply(zaptest.NewLogger(t)),
-			logging.Module,
+			logging.Module(zaptest.NewLogger(GinkgoT())),
 			health.Module,
 		)
 
@@ -61,8 +59,7 @@ var _ = Describe("Health", func() {
 	It("failing liveness check returns 503", func() {
 		app := fxtest.New(
 			GinkgoT(),
-			fx.Supply(zaptest.NewLogger(GinkgoT())),
-			logging.Module,
+			logging.Module(zaptest.NewLogger(GinkgoT())),
 			health.Module,
 			fx.Provide(health.AsLivenessCheck(func() health.Check {
 				return health.Check{
@@ -89,8 +86,7 @@ var _ = Describe("Health", func() {
 	It("failing readiness check returns 503", func() {
 		app := fxtest.New(
 			GinkgoT(),
-			fx.Supply(zaptest.NewLogger(GinkgoT())),
-			logging.Module,
+			logging.Module(zaptest.NewLogger(GinkgoT())),
 			health.Module,
 			fx.Provide(health.AsReadinessCheck(func() health.Check {
 				return health.Check{

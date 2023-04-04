@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
+	"go.uber.org/zap"
 )
 
 type TestConf struct {
@@ -45,11 +46,39 @@ var _ = Describe("Test", func() {
 	})
 
 	It("sprout.Logger works as expected", func() {
+		var logger *zap.Logger
+		app := fxtest.New(
+			GinkgoT(),
+			test.Module(GinkgoT()),
+			fx.Provide(sprout.Logger("test")),
+			fx.Populate(&logger),
+		)
+		app.RequireStart()
+		defer app.RequireStop()
+
+		Expect(logger).NotTo(BeNil())
+	})
+
+	It("sprout.SugaredLogger works as expected", func() {
+		var logger *zap.SugaredLogger
+		app := fxtest.New(
+			GinkgoT(),
+			test.Module(GinkgoT()),
+			fx.Provide(sprout.SugaredLogger("test")),
+			fx.Populate(&logger),
+		)
+		app.RequireStart()
+		defer app.RequireStop()
+
+		Expect(logger).NotTo(BeNil())
+	})
+
+	It("sprout.LogrLogger works as expected", func() {
 		var logger logr.Logger
 		app := fxtest.New(
 			GinkgoT(),
 			test.Module(GinkgoT()),
-			fx.Decorate(sprout.Logger("test")),
+			fx.Provide(sprout.LogrLogger("test")),
 			fx.Populate(&logger),
 		)
 		app.RequireStart()

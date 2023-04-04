@@ -20,8 +20,7 @@ var _ = Describe("Config", func() {
 		var readConfig Config
 		app := fxtest.New(
 			GinkgoT(),
-			logging.Module,
-			fx.Supply(zaptest.NewLogger(GinkgoT())),
+			logging.Module(zaptest.NewLogger(GinkgoT())),
 			fx.Provide(config.Config("TEST", Config{})),
 			fx.Populate(&readConfig),
 		)
@@ -40,8 +39,7 @@ var _ = Describe("Config", func() {
 		var readConfig Config
 		app := fxtest.New(
 			t,
-			logging.Module,
-			fx.Supply(zaptest.NewLogger(GinkgoT())),
+			logging.Module(zaptest.NewLogger(GinkgoT())),
 			fx.Provide(config.Config("TEST", Config{})),
 			fx.Populate(&readConfig),
 		)
@@ -60,7 +58,7 @@ var _ = Describe("Config", func() {
 		var readConfig *Config
 		app := fxtest.New(
 			t,
-			logging.Module,
+			logging.Module(zaptest.NewLogger(GinkgoT())),
 			fx.Supply(zaptest.NewLogger(GinkgoT())),
 			fx.Provide(config.Config("TEST", &Config{})),
 			fx.Populate(&readConfig),

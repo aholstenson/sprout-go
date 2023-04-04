@@ -7,11 +7,15 @@ import (
 	"go.uber.org/zap"
 )
 
-// Module provides logging. It will initialize a logger based on the
-// environment, such as using a pretty console logger in development mode.
-var Module = fx.Module(
-	"sprout:logging",
-	fx.Provide(func(logger *zap.Logger) logr.Logger {
-		return zapr.NewLogger(logger)
-	}),
-)
+// Module provides logging bindings based on a zap.Logger root logger.
+func Module(logger *zap.Logger) fx.Option {
+	return fx.Module(
+		"sprout:logging",
+		fx.Provide(fx.Annotate(func() *zap.Logger {
+			return logger
+		}, fx.ResultTags(`name:"logging.zap"`))),
+		fx.Provide(fx.Annotate(func(logger *zap.Logger) logr.Logger {
+			return zapr.NewLogger(logger)
+		}, fx.ParamTags(`name:"logging.zap"`), fx.ResultTags(`name:"logging.logr"`))),
+	)
+}

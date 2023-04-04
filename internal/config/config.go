@@ -5,7 +5,16 @@ import (
 
 	"github.com/caarlos0/env/v7"
 	"github.com/go-logr/logr"
+	"go.uber.org/fx"
+	"go.uber.org/zap"
 )
+
+type ConfigIn struct {
+	fx.In
+
+	Logger     *zap.Logger  `optional:"true"`
+	LogrLogger *logr.Logger `optional:"true"`
+}
 
 // Config will read configuration from the environment and provide the
 // specified type to the application.
@@ -14,18 +23,12 @@ func Config[T any](prefix string, value T) any {
 		prefix += "_"
 	}
 
-	return func(logger logr.Logger) (T, error) {
+	return func(in ConfigIn) (T, error) {
 		var config = value
 
 		opts := env.Options{
 			Prefix: prefix,
-			OnSet: func(tag string, value interface{}, isDefault bool) {
-				if !isDefault {
-					logger.V(1).Info("Read config value", "key", tag, "value", value)
-				} else {
-					logger.V(1).Info("Config value set to default", "key", tag, "value", value)
-				}
-			},
+			OnSet:  logFunc(in),
 		}
 
 		var err error
@@ -41,6 +44,30 @@ func Config[T any](prefix string, value T) any {
 
 		return config, nil
 	}
+}
+
+func logFunc(in ConfigIn) func(tag string, value interface{}, isDefault bool) {
+	if in.Logger != nil {
+		logger := in.Logger
+		return func(tag string, value interface{}, isDefault bool) {
+			if !isDefault {
+				logger.Info("Read config value", zap.String("key", tag), zap.Any("value", value))
+			} else {
+				logger.Debug("Config value set to default", zap.String("key", tag), zap.Any("value", value))
+			}
+		}
+	} else if in.LogrLogger != nil {
+		logger := in.LogrLogger
+		return func(tag string, value interface{}, isDefault bool) {
+			if !isDefault {
+				logger.Info("Read config value", "key", tag, "value", value)
+			} else {
+				logger.V(1).Info("Config value set to default", "key", tag, "value", value)
+			}
+		}
+	}
+
+	return func(tag string, value interface{}, isDefault bool) {}
 }
 
 // BindConfig is an on-demand version of Config. It will read configuration

@@ -6,7 +6,6 @@ import (
 	"github.com/levelfourab/sprout-go/internal/otel"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
-	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -32,18 +31,18 @@ type TB interface {
 //	)
 //	app.RequireStart()
 func Module(t TB) fx.Option {
+	logger := zaptest.NewLogger(t)
 	return fx.Options(
-		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
-			return &fxevent.ZapLogger{Logger: log.Named("fx")}
+		fx.WithLogger(func() fxevent.Logger {
+			return &fxevent.ZapLogger{Logger: logger.Named("fx")}
 		}),
-		fx.Supply(zaptest.NewLogger(t)),
 		fx.Supply(internal.ServiceInfo{
 			Name:        "test",
 			Version:     "dev",
 			Development: internal.CheckIfDevelopment(),
 			Testing:     true,
 		}),
-		logging.Module,
+		logging.Module(logger),
 		otel.Module,
 	)
 }

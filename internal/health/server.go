@@ -8,15 +8,15 @@ import (
 	"time"
 
 	"github.com/alexliesenfeld/health"
-	"github.com/go-logr/logr"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 )
 
 type Params struct {
 	fx.In
 
 	Lifecycle fx.Lifecycle
-	Logger    logr.Logger
+	Logger    *zap.Logger
 	Config    Config
 
 	LivenessChecks  []Check `group:"health.liveness"`
@@ -36,14 +36,14 @@ func server(params Params) {
 			mux.HandleFunc(
 				"/healthz",
 				health.NewHandler(newChecker(
-					params.Logger.WithValues("type", "liveness"),
+					params.Logger.With(zap.String("type", "liveness")),
 					params.LivenessChecks,
 				),
 				))
 			mux.HandleFunc(
 				"/readyz",
 				health.NewHandler(newChecker(
-					params.Logger.WithValues("type", "readiness"),
+					params.Logger.With(zap.String("type", "readiness")),
 					params.ReadinessChecks,
 				),
 				))
@@ -57,11 +57,11 @@ func server(params Params) {
 				Handler: mux,
 			}
 
-			params.Logger.Info("Starting health server", "port", params.Config.Port)
+			params.Logger.Info("Starting health server", zap.Int("port", params.Config.Port))
 			go func() {
 				err2 := httpServer.Serve(ln)
 				if err2 != nil && err2 != http.ErrServerClosed {
-					params.Logger.Error(err2, "Error starting health server")
+					params.Logger.Error("Error starting health server", zap.Error(err2))
 				}
 			}()
 			return nil
@@ -73,14 +73,14 @@ func server(params Params) {
 	})
 }
 
-func newChecker(logger logr.Logger, checks []Check) health.Checker {
+func newChecker(logger *zap.Logger, checks []Check) health.Checker {
 	options := []health.CheckerOption{
 		health.WithTimeout(5 * time.Second),
 		health.WithStatusListener(func(ctx context.Context, state health.CheckerState) {
 			if state.Status == health.StatusDown {
-				logger.Info("Health status changed", "state", "down")
+				logger.Info("Health status changed", zap.String("state", "down"))
 			} else if state.Status == health.StatusUp {
-				logger.Info("Health status changed", "state", "up")
+				logger.Info("Health status changed", zap.String("state", "up"))
 			}
 		}),
 		health.WithInterceptors(func(next health.InterceptorFunc) health.InterceptorFunc {
@@ -90,9 +90,9 @@ func newChecker(logger logr.Logger, checks []Check) health.Checker {
 
 				if currentStatus != result.Status {
 					if result.Status == health.StatusUp {
-						logger.Info("Health check marked as healthy", "name", name)
+						logger.Info("Health check marked as healthy", zap.String("name", name))
 					} else if result.Status == health.StatusDown {
-						logger.Info("Health check marked as unhealthy", "name", name)
+						logger.Info("Health check marked as unhealthy", zap.String("name", name))
 					}
 				}
 				return result
