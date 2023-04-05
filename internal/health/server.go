@@ -12,65 +12,90 @@ import (
 	"go.uber.org/zap"
 )
 
-type Params struct {
-	fx.In
-
-	Lifecycle fx.Lifecycle
-	Logger    *zap.Logger
-	Config    Config
-
-	LivenessChecks  []Check `group:"health.liveness"`
-	ReadinessChecks []Check `group:"health.readiness"`
-}
-
 type Config struct {
 	// Port is the port to bind to
 	Port int `env:"PORT" envDefault:"8088"`
 }
 
-func server(params Params) {
-	var httpServer *http.Server
-	params.Lifecycle.Append(fx.Hook{
+type Server struct {
+	logger *zap.Logger
+
+	httpListener net.Listener
+	httpServer   *http.Server
+	httpPort     int
+
+	livenessChecks  []Check
+	readinessChecks []Check
+}
+
+func NewServer(lifecycle fx.Lifecycle, logger *zap.Logger, config Config) Checks {
+	s := &Server{
+		logger:   logger,
+		httpPort: config.Port,
+	}
+
+	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			mux := &http.ServeMux{}
-			mux.HandleFunc(
-				"/healthz",
-				health.NewHandler(newChecker(
-					params.Logger.With(zap.String("type", "liveness")),
-					params.LivenessChecks,
-				),
-				))
-			mux.HandleFunc(
-				"/readyz",
-				health.NewHandler(newChecker(
-					params.Logger.With(zap.String("type", "readiness")),
-					params.ReadinessChecks,
-				),
-				))
-
-			ln, err := net.Listen("tcp", ":"+strconv.Itoa(params.Config.Port))
-			if err != nil {
-				return err
-			}
-
-			httpServer = &http.Server{
-				Handler: mux,
-			}
-
-			params.Logger.Info("Starting health server", zap.Int("port", params.Config.Port))
-			go func() {
-				err2 := httpServer.Serve(ln)
-				if err2 != nil && err2 != http.ErrServerClosed {
-					params.Logger.Error("Error starting health server", zap.Error(err2))
-				}
-			}()
-			return nil
+			return s.Start()
 		},
-
 		OnStop: func(ctx context.Context) error {
-			return httpServer.Shutdown(ctx)
+			return s.Stop(ctx)
 		},
 	})
+	return s
+}
+
+func (s *Server) AddLivenessCheck(check Check) {
+	s.livenessChecks = append(s.livenessChecks, check)
+}
+
+func (s *Server) AddReadinessCheck(check Check) {
+	s.readinessChecks = append(s.readinessChecks, check)
+}
+
+func (s *Server) Start() error {
+	mux := &http.ServeMux{}
+	mux.HandleFunc(
+		"/healthz",
+		health.NewHandler(newChecker(
+			s.logger.With(zap.String("type", "liveness")),
+			s.livenessChecks,
+		),
+		))
+	mux.HandleFunc(
+		"/readyz",
+		health.NewHandler(newChecker(
+			s.logger.With(zap.String("type", "readiness")),
+			s.readinessChecks,
+		),
+		))
+
+	ln, err := net.Listen("tcp", ":"+strconv.Itoa(s.httpPort))
+	if err != nil {
+		return err
+	}
+
+	s.httpListener = ln
+
+	s.httpServer = &http.Server{
+		Handler: mux,
+	}
+
+	s.logger.Info("Starting health server", zap.Int("port", s.httpPort))
+	go func() {
+		err2 := s.httpServer.Serve(ln)
+		if err2 != nil && err2 != http.ErrServerClosed {
+			s.logger.Error("Error starting health server", zap.Error(err2))
+		}
+	}()
+	return nil
+}
+
+func (s *Server) Stop(ctx context.Context) error {
+	s.logger.Info("Stopping health server")
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	return s.httpServer.Shutdown(ctx)
 }
 
 func newChecker(logger *zap.Logger, checks []Check) health.Checker {

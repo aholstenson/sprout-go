@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/levelfourab/sprout-go"
+	"github.com/levelfourab/sprout-go/internal/health"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -24,15 +25,15 @@ var Module = fx.Module(
 	fx.Provide(sprout.Config("", Conf{}), fx.Private),
 	fx.Provide(sprout.Logger("example"), fx.Private),
 
-	fx.Provide(sprout.AsLivenessCheck(func(logger *zap.Logger) sprout.HealthCheck {
-		return sprout.HealthCheck{
+	fx.Invoke(func(checks health.Checks, logger *zap.Logger) {
+		checks.AddLivenessCheck(health.Check{
 			Name: "example",
 			Check: func(ctx context.Context) error {
 				logger.Info("Checked health")
 				return nil
 			},
-		}
-	})),
+		})
+	}),
 
 	fx.Provide(sprout.Tracer("example")),
 	fx.Invoke(func(logger *zap.Logger, conf Conf, tracer trace.Tracer) {

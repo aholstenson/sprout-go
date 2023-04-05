@@ -61,14 +61,14 @@ var _ = Describe("Health", func() {
 			GinkgoT(),
 			logging.Module(zaptest.NewLogger(GinkgoT())),
 			health.Module,
-			fx.Provide(health.AsLivenessCheck(func() health.Check {
-				return health.Check{
+			fx.Invoke(func(checks health.Checks) {
+				checks.AddLivenessCheck(health.Check{
 					Name: "test",
 					Check: func(ctx context.Context) error {
 						return errors.New("failed")
 					},
-				}
-			})),
+				})
+			}),
 		)
 		app.RequireStart()
 		defer app.RequireStop()
@@ -88,14 +88,14 @@ var _ = Describe("Health", func() {
 			GinkgoT(),
 			logging.Module(zaptest.NewLogger(GinkgoT())),
 			health.Module,
-			fx.Provide(health.AsReadinessCheck(func() health.Check {
-				return health.Check{
+			fx.Invoke(func(checks health.Checks) {
+				checks.AddReadinessCheck(health.Check{
 					Name: "test",
 					Check: func(ctx context.Context) error {
 						return errors.New("failed")
 					},
-				}
-			})),
+				})
+			}),
 		)
 		app.RequireStart()
 		defer app.RequireStop()
