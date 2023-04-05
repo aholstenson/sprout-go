@@ -54,21 +54,23 @@ func (s *Server) AddReadinessCheck(check Check) {
 }
 
 func (s *Server) Start() error {
+	s.logger.Info("Starting health server", zap.Int("port", s.httpPort))
+
 	mux := &http.ServeMux{}
 	mux.HandleFunc(
 		"/healthz",
 		health.NewHandler(newChecker(
 			s.logger.With(zap.String("type", "liveness")),
 			s.livenessChecks,
-		),
-		))
+		)),
+	)
 	mux.HandleFunc(
 		"/readyz",
 		health.NewHandler(newChecker(
 			s.logger.With(zap.String("type", "readiness")),
 			s.readinessChecks,
-		),
-		))
+		)),
+	)
 
 	ln, err := net.Listen("tcp", ":"+strconv.Itoa(s.httpPort))
 	if err != nil {
@@ -81,7 +83,6 @@ func (s *Server) Start() error {
 		Handler: mux,
 	}
 
-	s.logger.Info("Starting health server", zap.Int("port", s.httpPort))
 	go func() {
 		err2 := s.httpServer.Serve(ln)
 		if err2 != nil && err2 != http.ErrServerClosed {

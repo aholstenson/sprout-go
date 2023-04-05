@@ -20,6 +20,9 @@ var _ = Describe("Health", func() {
 			GinkgoT(),
 			logging.Module(zaptest.NewLogger(GinkgoT())),
 			health.Module,
+			fx.Invoke(func(checks health.Checks) {
+				// Do nothing, only here to make server always start
+			}),
 		)
 		app.RequireStart()
 		defer app.RequireStop()
@@ -41,6 +44,9 @@ var _ = Describe("Health", func() {
 			t,
 			logging.Module(zaptest.NewLogger(GinkgoT())),
 			health.Module,
+			fx.Invoke(func(checks health.Checks) {
+				// Do nothing, only here to make server always start
+			}),
 		)
 
 		app.RequireStart()

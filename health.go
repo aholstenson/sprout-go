@@ -6,4 +6,4 @@ import (
 
 type HealthCheck = health.Check
 
-type HealthChecks = health.Checks
+type Health = health.Checks

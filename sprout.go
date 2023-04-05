@@ -39,7 +39,8 @@ func New(name string, version string) *Sprout {
 // With lets you specify Fx options to be used when creating the application.
 func (s *Sprout) With(options ...fx.Option) *fx.App {
 	logger := s.logger
-	coreModules := []fx.Option{
+
+	allOptions := []fx.Option{
 		fx.WithLogger(func() fxevent.Logger {
 			return &fxevent.ZapLogger{Logger: logger.Named("fx")}
 		}),
@@ -54,5 +55,11 @@ func (s *Sprout) With(options ...fx.Option) *fx.App {
 		health.Module,
 	}
 
-	return fx.New(append(coreModules, options...)...)
+	allOptions = append(allOptions, options...)
+	allOptions = append(allOptions, fx.Invoke(enableHealthServer))
+	return fx.New(allOptions...)
+}
+
+func enableHealthServer(checks Health) { //nolint:revive
+	// Do nothing, only here to make health server always start
 }

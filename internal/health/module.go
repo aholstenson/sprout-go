@@ -11,7 +11,4 @@ var Module = fx.Module(
 	fx.Provide(config.Config("HEALTH_SERVER", Config{}), fx.Private),
 	fx.Provide(logging.Logger("health"), fx.Private),
 	fx.Provide(fx.Annotate(NewServer, fx.As(new(Checks)))),
-	fx.Invoke(func(checks Checks) {
-		// Do nothing, only here to make server always start
-	}),
 )
