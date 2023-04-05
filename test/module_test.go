@@ -114,4 +114,17 @@ var _ = Describe("Test", func() {
 
 		Expect(meter).NotTo(BeNil())
 	})
+
+	It("sprout.Health is available", func() {
+		var health sprout.Health
+		app := fxtest.New(
+			GinkgoT(),
+			test.Module(GinkgoT()),
+			fx.Populate(&health),
+		)
+		app.RequireStart()
+		defer app.RequireStop()
+
+		Expect(health).NotTo(BeNil())
+	})
 })

@@ -2,6 +2,7 @@ package test
 
 import (
 	"github.com/levelfourab/sprout-go/internal"
+	"github.com/levelfourab/sprout-go/internal/health"
 	"github.com/levelfourab/sprout-go/internal/logging"
 	"github.com/levelfourab/sprout-go/internal/otel"
 	"go.uber.org/fx"
@@ -44,5 +45,6 @@ func Module(t TB) fx.Option {
 		}),
 		logging.Module(logger),
 		otel.Module,
+		health.Module,
 	)
 }
