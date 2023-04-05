@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	"github.com/levelfourab/sprout-go/internal/config"
 	"github.com/levelfourab/sprout-go/internal/logging"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -14,6 +15,8 @@ import (
 var Module = fx.Module(
 	"sprout:otel",
 	fx.Provide(logging.LogrLogger("otel"), fx.Private),
+	fx.Provide(logging.Logger("otel"), fx.Private),
+	fx.Provide(config.Config("OTEL_TRACING", traceConfig{}), fx.Private),
 	fx.Invoke(func(logger logr.Logger) {
 		otel.SetLogger(logger)
 
