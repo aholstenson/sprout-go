@@ -1,7 +1,17 @@
 # Sprout
 
-Sprout is a library to build microservices in Go. It provides a way to set up
-shared things such as configuration, logging, telemetry and metrics.
+Sprout is a module to build microservices in Go. It provides a way to set up
+shared things such as configuration, logging, tracing, metrics and health
+checks.
+
+## Features
+
+- 💉 Dependency injection and lifecycle management via [Fx](https://github.com/uber-go/fx)
+- 🛠️ Configuration via environment variables using [env](https://github.com/caarlos0/env)
+- 📝 Logging via [Zap](https://github.com/uber-go/zap) and [logr](https://github.com/go-logr/logr)
+- 🔍 Tracing and metrics via [OpenTelemetry](https://opentelemetry.io/)
+- 🩺 Liveness and readiness checks via [Health](https://github.com/alexliesenfeld/health)
+- 📤 OTLP exporting of traces and metrics
 
 ## Usage
 
@@ -9,7 +19,7 @@ Sprout provides a small wrapper around [Fx](https://github.com/uber-go/fx) that
 bootstraps the application. Sprout encourages the use of modules to keep
 things organized.
 
-The main application may look something like this:
+The main of the application may look something like this:
 
 ```go
 package main
@@ -23,19 +33,13 @@ func main() {
 }
 ```
 
-A module can then be defined like this:
+The module can then be defined like this:
 
 ```go
-package main
+package example
 
 import "github.com/levelfourab/sprout-go"
 import "go.uber.org/fx"
-
-func main() {
-  sprout.New("ExampleApp", "v1.0.0").With(
-    example.Module
-  ).Run()
-}
 
 type Config struct {
   Name string `env:"NAME" envDefault:"Test"`
@@ -49,6 +53,40 @@ var Module = fx.Module(
     logger.Info("Hello", "name", cfg.Name)
   })
 )
+```
+
+## Development mode
+
+Sprout will act differently if the environment variable `DEVELOPMENT` is set
+to `true`. This is intended for local development, and will enable things such
+as pretty printing logs and disable sending of traces and metrics to an OTLP
+backend.
+
+A quick way to enable development mode is to use the `DEVELOPMENT=true` prefix
+when running the application:
+
+```sh
+DEVELOPMENT=true go run .
+```
+
+As Sprout applications use environment variables for configuration a tool such
+as [direnv](https://direnv.net/) can be used to automatically set variables
+when entering the project directory.
+
+A basic `.envrc` for use with direnv would look like this:
+
+```sh
+# .envrc
+export DEVELOPMENT=true
+```
+
+Entering the project directory will then use this file:
+
+```sh
+$ cd example
+direnv: loading .envrc
+direnv: export +DEVELOPMENT
+$ go run .
 ```
 
 ## Configuration
@@ -69,7 +107,7 @@ type Config struct {
 
 var Module = fx.Module(
   "example",
-  fx.Provide(sprout.Config("", &Config{}), fx.Private),
+  fx.Provide(sprout.Config("PREFIX_IF_ANY", &Config{}), fx.Private),
   fx.Invoke(func(cfg *Config) {
     // Config is now available for use with Fx
   })
@@ -79,7 +117,7 @@ var Module = fx.Module(
 ## Logging
 
 Sprout provides logging via [Zap](https://github.com/uber-go/zap) and
-[Logr](https://github.com/go-logr/logr). Sprout will automatically configure 
+[Logr](https://github.com/go-logr/logr). Sprout will automatically configure
 logging based on if the application is running in development or production
 mode. In development mode, logs are pretty printed to stderr. In production
 mode, logs are formatted as JSON and sent to stderr.
@@ -95,7 +133,7 @@ Example:
 var Module = fx.Module(
   "example",
   fx.Provide(sprout.Logger("example"), fx.Private),
-  fx.Invoke(func(logger *logr.Logger) {
+  fx.Invoke(func(logger *zap.Logger) {
     // Logger is now available for use with Fx
   })
 )
@@ -114,9 +152,9 @@ fx.Provide(sprout.LogrLogger("example"), fx.Private)
 ## Observability
 
 Sprout integrates with [OpenTelemetry](https://opentelemetry.io/) and will push
-data to an [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)
-instance. This decouples the application from the telemetry backend, allowing
-for easy migration to other backends.
+data to an OTLP compatible backend such as [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/).
+This decouples the application from the telemetry backend, allowing for easy
+migration to other backends.
 
 The following environment variables are used to configure the OpenTelemetry
 integration:
@@ -130,20 +168,35 @@ integration:
 | `OTEL_EXPORTER_OTLP_TRACES_TIMEOUT` | Custom timeout for sending traces | `10s` |
 | `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Custom endpoint to send metrics to, overrides `OTEL_EXPORTER_OTLP_ENDPOINT` | `https://localhost:4317` |
 | `OTEL_EXPORTER_OTLP_METRICS_TIMEOUT` | Custom timeout for sending metrics | `10s` |
+| `OTEL_TRACING_DEVELOPMENT` | Enable development mode for tracing | `false` |
+
+If Sprout is in development mode, the OTLP exporter will be disabled. You can
+enable logging of traces using the `OTEL_TRACING_DEVELOPMENT` environment
+variable.
 
 ### Tracing
 
-Sprout provides tracing via [OpenTelemetry](https://opentelemetry.io/). Sprout
-will automatically configure tracing based on if the application is running
-in development or production mode. In development mode, traces are currently
-not sent anywhere. In production mode, traces are sent to an OpenTelemetry
-Collector instance.
+Sprout provides an easy way to make a [`trace.Tracer`](https://pkg.go.dev/go.opentelemetry.io/otel/trace#Tracer)
+available to a module:
 
 ```go
 var Module = fx.Module(
   "example",
   fx.Provide(sprout.Tracer("example"), fx.Private),
-  fx.Invoke(func(tracer *trace.Tracer) {
+  fx.Invoke(func(tracer trace.Tracer) {
+    // Tracer is now available for use with Fx
+  })
+)
+```
+
+If the module is internal to the service, you can use `sprout.ServiceTracer` to
+create a tracer based on the service name and version:
+  
+```go
+var Module = fx.Module(
+  "internalModule",
+  fx.Provide(sprout.ServiceTracer(), fx.Private),
+  fx.Invoke(func(tracer trace.Tracer) {
     // Tracer is now available for use with Fx
   })
 )
@@ -151,19 +204,93 @@ var Module = fx.Module(
 
 ### Metrics
 
-Sprout provides metrics via [OpenTelemetry](https://opentelemetry.io/). Sprout
-will automatically configure metrics based on if the application is running
-in development or production mode. In development mode, metrics are currently
-not sent anywhere. In production mode, metrics are sent to an OpenTelemetry
-Collector instance.
+Sprout provides an easy way to make a [`metric.Meter`](https://pkg.go.dev/go.opentelemetry.io/otel/metric#Meter)
+available to a module:
 
 ```go
 var Module = fx.Module(
   "example",
   fx.Provide(sprout.Meter("example"), fx.Private),
-  fx.Invoke(func(meter *otel.Meter) {
+  fx.Invoke(func(meter metric.Meter) {
     // Meter is now available for use with Fx
   })
+)
+```
+
+For modules that are internal to the service, you can use `sprout.ServiceMeter`
+to create a meter based on the service name and version:
+
+```go
+var Module = fx.Module(
+  "internalModule",
+  fx.Provide(sprout.ServiceMeter(), fx.Private),
+  fx.Invoke(func(meter metric.Meter) {
+    // Meter is now available for use with Fx
+  })
+)
+```
+
+## Health checks
+
+Sprout will start a HTTP server on port 8088 that exposes a `/healthz` and
+`/readyz` endpoint. Requests to these will run checks and return a `200` status
+code if all checks pass, or a `503` status code if any check fails. The port
+that the server listens on can be configured via the `HEALTH_SERVER_PORT`
+environment variable.
+
+Health checks are implemented using [Health](https://github.com/alexliesenfeld/health)
+with checks being defined via `sprout.HealthCheck` structs. Checks can then
+be added by calling `AddLivenessCheck` or `AddReadinessCheck` on the
+`sprout.Health` service.
+
+Example:
+
+```go
+var Module = fx.Module(
+  "example",
+  fx.Invoke(func(checks sprout.Health) {
+    checks.AddLivenessCheck(sprout.HealthCheck{
+      Name: "nameOfCheck",
+      Check: func(ctx context.Context) error {
+        // Check health here
+        return nil
+      },
+    })
+  })
+)
+```
+
+Checks can not be added after the application has started. It is recommended to
+add checks either using `fx.Invoke` for simple cases or in a provide function
+of a service.
+
+Example with a fictional `RemoteService`:
+
+```go
+var Module = fx.Module(
+  "healthCheckWithProvide",
+  fx.Provide(func(lifecycle fx.Lifecycle, checks sprout.HealthChecks) *RemoteService {
+    service := &RemoteService{
+      ...
+    }
+
+    checks.AddReadinessCheck(sprout.HealthCheck{
+      Name: "nameOfCheck",
+      Check: func(ctx context.Context) error {
+        return service.Ping()
+      },
+    })
+
+    lifecycle.Append(fx.Hook{
+      OnStart: func(ctx context.Context) error {
+        return service.Start()
+      },
+      OnStop: func(ctx context.Context) error {
+        return service.Stop()
+      },
+    })
+    return service
+  }),
 )
 ```
 
