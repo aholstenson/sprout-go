@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type ConfigIn struct {
+type In struct {
 	fx.In
 
 	Logger     *zap.Logger  `optional:"true"`
@@ -23,7 +23,7 @@ func Config[T any](prefix string, value T) any {
 		prefix += "_"
 	}
 
-	return func(in ConfigIn) (T, error) {
+	return func(in In) (T, error) {
 		var config = value
 
 		opts := env.Options{
@@ -46,7 +46,7 @@ func Config[T any](prefix string, value T) any {
 	}
 }
 
-func logFunc(in ConfigIn) func(tag string, value interface{}, isDefault bool) {
+func logFunc(in In) func(tag string, value interface{}, isDefault bool) {
 	if in.Logger != nil {
 		logger := in.Logger
 		return func(tag string, value interface{}, isDefault bool) {
