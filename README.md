@@ -294,6 +294,55 @@ var Module = fx.Module(
 )
 ```
 
+## Working with the code
+
+### Pre-commit hooks
+
+[pre-commit](https://pre-commit.com/) is used to run various checks on the
+code before it is committed. To install the hooks, run:
+
+```bash
+pre-commit install -t pre-commit -t pre-commit-msg
+```
+
+Commits will fail if any of the checks fail. If files are modified during the
+checks, such as for formatting, you will need to add the modified files to the
+commit again.
+
+### Commit messages
+
+[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) is used
+for commit messages. This allows for automatic generation of changelogs and
+version numbers. [commitlint](https://commitlint.js.org/#/) is used to enforce
+the commit message format as a pre-commit hook.
+
+### Code style
+
+`gofmt` and [goimports](http://godoc.org/golang.org/x/tools/cmd/goimports) is
+used for code formatting. Code formatting will run automatically as part of the
+pre-commit hooks.
+
+In addition to this [EditorConfig](https://editorconfig.org/) is used to ensure
+consistent code style across editors.
+
+### Linting
+
+[golangci-lint](https://golangci-lint.run/) is used for linting. Linters will
+run automatically as part of the pre-commit hooks. To run the linters manually:
+
+```bash
+golangci-lint run
+```
+
+### Running tests
+
+[Ginkgo](https://onsi.github.io/ginkgo/) is used for testing. Tests can be run
+via `go test` but the `ginkgo` CLI provides an improved experience:
+
+```bash
+ginkgo run ./...
+```
+
 ## License
 
 Sprout is licensed under the MIT License. See [LICENSE](LICENSE) for the full
