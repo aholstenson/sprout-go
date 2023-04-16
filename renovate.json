@@ -31,6 +31,11 @@
 			  "github.com/onsi/gomega"
 			],
 			"semanticCommitType": "build"
+		},
+		{
+			"groupName": "GitHub Actions",
+			"matchManagers": [ "github-actions" ],
+			"semanticCommitType": "build"
 		}
 	]
 }
