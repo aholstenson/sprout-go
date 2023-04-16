@@ -5,6 +5,10 @@
 		"group:recommended"
 	],
 
+	"pre-commit": {
+		"enabled": true
+	},
+
 	"labels": [ "dependencies" ],
 
 	"semanticCommits": "enabled",
@@ -30,6 +34,16 @@
 			  "github.com/onsi/ginkgo",
 			  "github.com/onsi/gomega"
 			],
+			"semanticCommitType": "build"
+		},
+		{
+			"groupName": "pre-commit",
+			"matchManagers": [ "pre-commit" ],
+			"semanticCommitType": "build"
+		},
+		{
+			"groupName": "Docker Compose",
+			"matchManagers": [ "docker-compose" ],
 			"semanticCommitType": "build"
 		},
 		{
