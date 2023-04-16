@@ -12,7 +12,8 @@
 	"semanticCommitType": "chore",
 
 	"postUpdateOptions": [
-		"gomodTidy"
+		"gomodTidy",
+		"gomodUpdateImportPaths"
 	],
 
 	"packageRules": [
@@ -23,6 +24,13 @@
 		{
 			"matchUpdateTypes": [ "patch" ],
 			"semanticCommitType": "fix"
+		},
+		{
+			"matchPackageNames": [
+			  "github.com/onsi/ginkgo",
+			  "github.com/onsi/gomega"
+			],
+			"semanticCommitType": "build"
 		}
 	]
 }
