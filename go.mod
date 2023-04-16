@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/alexliesenfeld/health v0.6.0
 	github.com/caarlos0/env/v7 v7.1.0
-	github.com/go-logr/logr v1.2.3
+	github.com/go-logr/logr v1.2.4
 	github.com/go-logr/zapr v1.2.3
 	github.com/onsi/ginkgo/v2 v2.9.2
 	github.com/onsi/gomega v1.27.5
