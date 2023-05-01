@@ -3,7 +3,7 @@ module github.com/levelfourab/sprout-go
 go 1.20
 
 require (
-	github.com/alexliesenfeld/health v0.6.0
+	github.com/alexliesenfeld/health v0.7.0
 	github.com/caarlos0/env/v7 v7.1.0
 	github.com/go-logr/logr v1.2.4
 	github.com/go-logr/zapr v1.2.3
