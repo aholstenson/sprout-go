@@ -6,6 +6,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/noop"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.uber.org/fx"
@@ -15,7 +16,7 @@ func setupMetrics(service ServiceInfo, resource *resource.Resource, lifecycle fx
 	if service.Development || service.Testing {
 		// If running in development or testing mode, we don't want to send
 		// any metrics to the collector
-		provider := metric.NewNoopMeterProvider()
+		provider := noop.NewMeterProvider()
 		global.SetMeterProvider(provider)
 		return provider, nil
 	}
