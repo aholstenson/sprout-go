@@ -1,9 +1,9 @@
 package sprout
 
 import (
-	"github.com/levelfourab/sprout-go/internal"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/fx"
 )
 
 // Tracer returns a function that can be used with fx.Provide to make a tracer
@@ -18,12 +18,12 @@ func Tracer(name string, opts ...trace.TracerOption) any {
 // tracer available to the application. The tracer will use the name and version
 // of the service.
 func ServiceTracer(opts ...trace.TracerOption) any {
-	return func(serviceInfo internal.ServiceInfo, tp trace.TracerProvider) trace.Tracer {
+	return fx.Annotate(func(serviceName string, serviceVersion string, tp trace.TracerProvider) trace.Tracer {
 		optsWithServiceVersion := append([]trace.TracerOption{
-			trace.WithInstrumentationVersion(serviceInfo.Version),
+			trace.WithInstrumentationVersion(serviceVersion),
 		}, opts...)
-		return tp.Tracer(serviceInfo.Name, optsWithServiceVersion...)
-	}
+		return tp.Tracer(serviceName, optsWithServiceVersion...)
+	}, fx.ParamTags(`name:"service:name"`, `name:"service:version"`))
 }
 
 // Meter returns a function that can be used with fx.Provide to make a meter
@@ -38,10 +38,10 @@ func Meter(name string, opts ...metric.MeterOption) any {
 // meter available to the application. The meter will use the name and version
 // of the service.
 func ServiceMeter(opts ...metric.MeterOption) any {
-	return func(serviceInfo internal.ServiceInfo, mp metric.MeterProvider) metric.Meter {
+	return fx.Annotate(func(serviceName string, serviceVersion string, mp metric.MeterProvider) metric.Meter {
 		optsWithServiceVersion := append([]metric.MeterOption{
-			metric.WithInstrumentationVersion(serviceInfo.Version),
+			metric.WithInstrumentationVersion(serviceVersion),
 		}, opts...)
-		return mp.Meter(serviceInfo.Name, optsWithServiceVersion...)
-	}
+		return mp.Meter(serviceName, optsWithServiceVersion...)
+	}, fx.ParamTags(`name:"service:name"`, `name:"service:version"`))
 }

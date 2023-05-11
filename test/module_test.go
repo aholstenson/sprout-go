@@ -101,6 +101,18 @@ var _ = Describe("Test", func() {
 		Expect(tracer).NotTo(BeNil())
 	})
 
+	It("sprout.ServiceTracer works as expected", func() {
+		var tracer trace.Tracer
+		app := fxtest.New(
+			GinkgoT(),
+			test.Module(GinkgoT()),
+			fx.Provide(sprout.ServiceTracer()),
+			fx.Populate(&tracer),
+		)
+		app.RequireStart()
+		defer app.RequireStop()
+	})
+
 	It("sprout.Meter works as expected", func() {
 		var meter metric.Meter
 		app := fxtest.New(
@@ -113,6 +125,18 @@ var _ = Describe("Test", func() {
 		defer app.RequireStop()
 
 		Expect(meter).NotTo(BeNil())
+	})
+
+	It("sprout.ServiceMeter works as expected", func() {
+		var meter metric.Meter
+		app := fxtest.New(
+			GinkgoT(),
+			test.Module(GinkgoT()),
+			fx.Provide(sprout.ServiceMeter()),
+			fx.Populate(&meter),
+		)
+		app.RequireStart()
+		defer app.RequireStop()
 	})
 
 	It("sprout.Health is available", func() {
