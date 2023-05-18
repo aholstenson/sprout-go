@@ -7,6 +7,7 @@ import (
 	"github.com/levelfourab/sprout-go/internal/health"
 	"github.com/levelfourab/sprout-go/internal/logging"
 	"github.com/levelfourab/sprout-go/internal/otel"
+	"github.com/levelfourab/sprout-go/internal/runtime"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
@@ -29,6 +30,7 @@ func New(name string, version string) *Sprout {
 	}
 
 	logger.Info("Starting application", zap.String("name", name), zap.String("version", version))
+	runtime.Setup(logger)
 	return &Sprout{
 		logger:  logger,
 		name:    name,
