@@ -38,16 +38,21 @@ func setupTracing(
 		if config.Development {
 			// If tracing development mode is enabled, we want to log the
 			// traces
+			logger.Info("Traces enabled for development mode, logging traces")
 			exportingOption = sdktrace.WithSyncer(&loggingTraceExporter{
 				logger: logger.Named("trace"),
 			})
 		} else {
 			// In other cases we use a no-op tracer provider
-			provider := trace.NewNoopTracerProvider()
-			otel.SetTracerProvider(provider)
-			return provider, nil
+			logger.Info("Disabling tracing due to development mode")
+			return noopTracing()
 		}
 	} else {
+		if !hasExporterEndpoint(true) {
+			logger.Warn("No tracing exporter endpoint set, disabling tracing")
+			return noopTracing()
+		}
+
 		// TODO: Load config and error if not set correctly
 		exporter := otlptracegrpc.NewUnstarted()
 		exportingOption = sdktrace.WithBatcher(exporter)
@@ -73,6 +78,12 @@ func setupTracing(
 	})
 
 	return tp, nil
+}
+
+func noopTracing() (trace.TracerProvider, error) {
+	provider := trace.NewNoopTracerProvider()
+	otel.SetTracerProvider(provider)
+	return provider, nil
 }
 
 type loggingTraceExporter struct {

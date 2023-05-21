@@ -162,11 +162,11 @@ integration:
 | Variable | Description | Default |
 | -------- | ----------- | ------- |
 | `OTEL_PROPAGATORS` | The default propagators to use | `tracecontext,baggage` |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | The endpoint to send traces, metrics and logs to | `https://localhost:4317` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | The endpoint to send traces, metrics and logs to |  |
 | `OTEL_EXPORTER_OTLP_TIMEOUT` | The timeout for sending data | `10s` |
-| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Custom endpoint to send traces to, overrides `OTEL_EXPORTER_OTLP_ENDPOINT` | `https://localhost:4317` |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Custom endpoint to send traces to, overrides `OTEL_EXPORTER_OTLP_ENDPOINT` |  |
 | `OTEL_EXPORTER_OTLP_TRACES_TIMEOUT` | Custom timeout for sending traces | `10s` |
-| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Custom endpoint to send metrics to, overrides `OTEL_EXPORTER_OTLP_ENDPOINT` | `https://localhost:4317` |
+| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Custom endpoint to send metrics to, overrides `OTEL_EXPORTER_OTLP_ENDPOINT` |  |
 | `OTEL_EXPORTER_OTLP_METRICS_TIMEOUT` | Custom timeout for sending metrics | `10s` |
 | `OTEL_TRACING_DEVELOPMENT` | Enable development mode for tracing | `false` |
 

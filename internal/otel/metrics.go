@@ -10,15 +10,25 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 )
 
-func setupMetrics(service ServiceInfo, resource *resource.Resource, lifecycle fx.Lifecycle) (metric.MeterProvider, error) {
+func setupMetrics(
+	service ServiceInfo,
+	resource *resource.Resource,
+	lifecycle fx.Lifecycle,
+	logger *zap.Logger,
+) (metric.MeterProvider, error) {
 	if service.Development || service.Testing {
 		// If running in development or testing mode, we don't want to send
 		// any metrics to the collector
-		provider := noop.NewMeterProvider()
-		global.SetMeterProvider(provider)
-		return provider, nil
+		logger.Info("Disabling metrics due to development mode")
+		return noopMetrics()
+	} else if !hasExporterEndpoint(false) {
+		// If no endpoint is set, we don't want to send any metrics to the
+		// collector
+		logger.Warn("No metrics exporter endpoint set, disabling metrics")
+		return noopMetrics()
 	}
 
 	exporter, err := otlpmetricgrpc.New(context.Background())
@@ -36,5 +46,11 @@ func setupMetrics(service ServiceInfo, resource *resource.Resource, lifecycle fx
 		},
 	})
 
+	return provider, nil
+}
+
+func noopMetrics() (metric.MeterProvider, error) {
+	provider := noop.NewMeterProvider()
+	global.SetMeterProvider(provider)
 	return provider, nil
 }

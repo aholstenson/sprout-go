@@ -2,6 +2,7 @@ package otel
 
 import (
 	"context"
+	"os"
 
 	"github.com/go-logr/logr"
 	"github.com/levelfourab/sprout-go/internal/config"
@@ -49,4 +50,19 @@ func createResource(service ServiceInfo) (*resource.Resource, error) {
 		resource.WithFromEnv(),
 		resource.WithTelemetrySDK(),
 	)
+}
+
+func hasExporterEndpoint(tracing bool) bool {
+	// OTEL_EXPORTER_OTLP_ENDPOINT is the default environment variable
+	if os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") != "" {
+		return true
+	}
+
+	if tracing {
+		// Tracing also uses OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+		return os.Getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT") != ""
+	}
+
+	// Metrics uses OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+	return os.Getenv("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT") != ""
 }
