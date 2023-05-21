@@ -7,9 +7,12 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/levelfourab/sprout-go/internal/config"
 	"github.com/levelfourab/sprout-go/internal/logging"
+	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/fx"
 )
 
@@ -28,6 +31,18 @@ var Module = fx.Module(
 	fx.Provide(createResource),
 	fx.Provide(setupTracing),
 	fx.Provide(setupMetrics),
+	fx.Invoke(func(rp trace.TracerProvider, mp metric.MeterProvider) error {
+		// This method depends on the tracer and meter providers which forces
+		// them to be created.
+
+		// Register runtime metric collection.
+		err := runtime.Start(runtime.WithMeterProvider(mp))
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}),
 )
 
 type ServiceInfo struct {
