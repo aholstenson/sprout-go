@@ -3,9 +3,9 @@ package otel
 import (
 	"context"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/noop"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -51,6 +51,6 @@ func setupMetrics(
 
 func noopMetrics() (metric.MeterProvider, error) {
 	provider := noop.NewMeterProvider()
-	global.SetMeterProvider(provider)
+	otel.SetMeterProvider(provider)
 	return provider, nil
 }
