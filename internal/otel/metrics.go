@@ -40,6 +40,8 @@ func setupMetrics(
 		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter)),
 		sdkmetric.WithResource(resource),
 	)
+	otel.SetMeterProvider(provider)
+
 	lifecycle.Append(fx.Hook{
 		OnStop: func(ctx context.Context) error {
 			return provider.Shutdown(ctx)
