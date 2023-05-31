@@ -8,7 +8,7 @@ require (
 	github.com/caarlos0/env/v7 v7.1.0
 	github.com/go-logr/logr v1.2.4
 	github.com/go-logr/zapr v1.2.4
-	github.com/onsi/ginkgo/v2 v2.9.5
+	github.com/onsi/ginkgo/v2 v2.9.7
 	github.com/onsi/gomega v1.27.7
 	github.com/thessem/zap-prettyconsole v0.3.0
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.42.0
