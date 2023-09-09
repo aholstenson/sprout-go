@@ -3,7 +3,7 @@ package config
 import (
 	"reflect"
 
-	"github.com/caarlos0/env/v7"
+	"github.com/caarlos0/env/v9"
 	"github.com/go-logr/logr"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -33,9 +33,9 @@ func Config[T any](prefix string, value T) any {
 
 		var err error
 		if reflect.TypeOf(config).Kind() == reflect.Ptr {
-			err = env.Parse(config, opts)
+			err = env.ParseWithOptions(config, opts)
 		} else {
-			err = env.Parse(&config, opts)
+			err = env.ParseWithOptions(&config, opts)
 		}
 
 		if err != nil {
@@ -77,7 +77,7 @@ func BindConfig(prefix string, value any) any {
 		prefix += "_"
 	}
 
-	err := env.Parse(value, env.Options{
+	err := env.ParseWithOptions(value, env.Options{
 		Prefix: prefix,
 	})
 	if err != nil {
