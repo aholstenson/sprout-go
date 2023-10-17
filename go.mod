@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/KimMachineGun/automemlimit v0.3.0
-	github.com/alexliesenfeld/health v0.7.0
+	github.com/alexliesenfeld/health v0.8.0
 	github.com/caarlos0/env/v9 v9.0.0
 	github.com/go-logr/logr v1.2.4
 	github.com/go-logr/zapr v1.2.4
