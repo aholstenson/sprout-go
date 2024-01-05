@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -81,7 +82,7 @@ func setupTracing(
 }
 
 func noopTracing() (trace.TracerProvider, error) {
-	provider := trace.NewNoopTracerProvider()
+	provider := noop.NewTracerProvider()
 	otel.SetTracerProvider(provider)
 	return provider, nil
 }
