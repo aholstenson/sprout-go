@@ -34,11 +34,12 @@
 			"matchPackagePrefixes": [ "go.opentelemetry.io" ]
 		},
 		{
+			"groupName": "Ginkgo testing",
 			"matchPackageNames": [
-			  "github.com/onsi/ginkgo/v2",
-			  "github.com/onsi/gomega"
+				"github.com/onsi/ginkgo/v2",
+				"github.com/onsi/gomega"
 			],
-			"semanticCommitType": "build"
+			"semanticCommitType": "test"
 		},
 		{
 			"groupName": "pre-commit",
