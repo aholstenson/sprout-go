@@ -8,8 +8,8 @@ require (
 	github.com/caarlos0/env/v9 v9.0.0
 	github.com/go-logr/logr v1.3.0
 	github.com/go-logr/zapr v1.2.4
-	github.com/onsi/ginkgo/v2 v2.12.0
-	github.com/onsi/gomega v1.27.10
+	github.com/onsi/ginkgo/v2 v2.13.2
+	github.com/onsi/gomega v1.30.0
 	github.com/thessem/zap-prettyconsole v0.3.0
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.46.1
 	go.opentelemetry.io/contrib/propagators/autoprop v0.46.1
@@ -54,7 +54,7 @@ require (
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.14.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
-	golang.org/x/tools v0.12.0 // indirect
+	golang.org/x/tools v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230822172742-b8732ec3820d // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d // indirect
 	google.golang.org/grpc v1.59.0 // indirect
