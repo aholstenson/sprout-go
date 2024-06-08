@@ -62,6 +62,6 @@ func (s *Sprout) With(options ...fx.Option) *fx.App {
 	return fx.New(allOptions...)
 }
 
-func enableHealthServer(checks Health) { //nolint:revive
+func enableHealthServer(checks Health) {
 	// Do nothing, only here to make health server always start
 }
