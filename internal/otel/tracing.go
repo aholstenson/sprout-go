@@ -91,7 +91,7 @@ type loggingTraceExporter struct {
 	logger *zap.Logger
 }
 
-func (e *loggingTraceExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error { //nolint:revive
+func (e *loggingTraceExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
 	for _, span := range spans {
 		// Collect the the context as fields
 		fields := []zap.Field{
@@ -142,6 +142,6 @@ func (e *loggingTraceExporter) ExportSpans(ctx context.Context, spans []sdktrace
 	return nil
 }
 
-func (e *loggingTraceExporter) Shutdown(ctx context.Context) error { //nolint:revive
+func (e *loggingTraceExporter) Shutdown(ctx context.Context) error {
 	return nil
 }

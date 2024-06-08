@@ -15,8 +15,10 @@ issues:
       source: ginkgo
 
 linters-settings:
-  govet:
-    check-shadowing: true
+  revive:
+    rules:
+      - name: 'unused-parameter'
+        disabled: true
   misspell:
     locale: US
 
