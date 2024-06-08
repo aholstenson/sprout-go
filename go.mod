@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.22.2
 
 require (
-	github.com/KimMachineGun/automemlimit v0.3.0
+	github.com/KimMachineGun/automemlimit v0.6.1
 	github.com/alexliesenfeld/health v0.8.0
 	github.com/caarlos0/env/v9 v9.0.0
 	github.com/go-logr/logr v1.4.2
@@ -41,6 +41,7 @@ require (
 	github.com/google/pprof v0.0.0-20210407192527-94a9f03dee38 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
 	github.com/opencontainers/runtime-spec v1.0.2 // indirect
+	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	go.opentelemetry.io/contrib/propagators/aws v1.27.0 // indirect
