@@ -6,8 +6,8 @@ require (
 	github.com/KimMachineGun/automemlimit v0.3.0
 	github.com/alexliesenfeld/health v0.8.0
 	github.com/caarlos0/env/v9 v9.0.0
-	github.com/go-logr/logr v1.3.0
-	github.com/go-logr/zapr v1.2.4
+	github.com/go-logr/logr v1.4.2
+	github.com/go-logr/zapr v1.3.0
 	github.com/onsi/ginkgo/v2 v2.13.2
 	github.com/onsi/gomega v1.30.0
 	github.com/thessem/zap-prettyconsole v0.3.0
@@ -22,7 +22,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.21.0
 	go.uber.org/automaxprocs v1.5.3
 	go.uber.org/fx v1.20.1
-	go.uber.org/zap v1.26.0
+	go.uber.org/zap v1.27.0
 )
 
 require (
