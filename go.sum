@@ -73,8 +73,8 @@ github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXf
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
-github.com/thessem/zap-prettyconsole v0.3.0 h1:jreGIwOwkfqpA1NWTsbXXr0ZSL68b39KpH54q9Hz58U=
-github.com/thessem/zap-prettyconsole v0.3.0/go.mod h1:93z1PhlPAYOWIOhPJvNkxE9cVM8jE5xB6/6HCtnvmcA=
+github.com/thessem/zap-prettyconsole v0.4.0 h1:905GshsxOSVz44hm0mEr00Dk/gjf1Aoq3tkW1o2kKuw=
+github.com/thessem/zap-prettyconsole v0.4.0/go.mod h1:6bRZpKuje/vxEMEAlF22qPHkcO8kfJSrL/0NALxuZoQ=
 go.opentelemetry.io/contrib/instrumentation/runtime v0.52.0 h1:UaQVCH34fQsyDjlgS0L070Kjs9uCrLKoQfzn2Nl7XTY=
 go.opentelemetry.io/contrib/instrumentation/runtime v0.52.0/go.mod h1:Ks4aHdMgu1vAfEY0cIBHcGx2l1S0+PwFm2BE/HRzqSk=
 go.opentelemetry.io/contrib/propagators/autoprop v0.52.0 h1:xyRih6jMB0vroMSRdBE+uyKx20BclB/bybJt/LaCxmY=
