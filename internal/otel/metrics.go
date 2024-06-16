@@ -19,12 +19,7 @@ func setupMetrics(
 	lifecycle fx.Lifecycle,
 	logger *zap.Logger,
 ) (metric.MeterProvider, error) {
-	if service.Development || service.Testing {
-		// If running in development or testing mode, we don't want to send
-		// any metrics to the collector
-		logger.Info("Disabling metrics due to development mode")
-		return noopMetrics()
-	} else if !hasExporterEndpoint(false) {
+	if !hasExporterEndpoint(false) {
 		// If no endpoint is set, we don't want to send any metrics to the
 		// collector
 		logger.Warn("No metrics exporter endpoint set, disabling metrics")
