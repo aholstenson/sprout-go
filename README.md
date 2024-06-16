@@ -168,11 +168,11 @@ integration:
 | `OTEL_EXPORTER_OTLP_TRACES_TIMEOUT` | Custom timeout for sending traces | `10s` |
 | `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Custom endpoint to send metrics to, overrides `OTEL_EXPORTER_OTLP_ENDPOINT` |  |
 | `OTEL_EXPORTER_OTLP_METRICS_TIMEOUT` | Custom timeout for sending metrics | `10s` |
-| `OTEL_TRACING_DEVELOPMENT` | Enable development mode for tracing | `false` |
+| `OTEL_TRACING_LOG` | Enable logging mode for tracing | `false` |
 
-If Sprout is in development mode, the OTLP exporter will be disabled. You can
-enable logging of traces using the `OTEL_TRACING_DEVELOPMENT` environment
-variable.
+OTLP exporting is disabled by default. You can enable logging of traces which
+can be useful for development by setting the `OTEL_TRACING_LOG` environment 
+variable to `true`.
 
 ### Tracing
 
