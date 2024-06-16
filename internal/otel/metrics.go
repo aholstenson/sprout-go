@@ -31,6 +31,7 @@ func setupMetrics(
 		return nil, err
 	}
 
+	logger.Info("Metrics enabled")
 	provider := sdkmetric.NewMeterProvider(
 		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter)),
 		sdkmetric.WithResource(resource),
