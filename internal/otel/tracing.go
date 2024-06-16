@@ -79,6 +79,7 @@ func setupTracing(
 		sampler = sdktrace.ParentBased(sdktrace.TraceIDRatioBased(sampleRate))
 	}
 
+	logger.Info("Tracing enabled", zap.Float64("rate", sampleRate))
 	tp := sdktrace.NewTracerProvider(
 		exportingOption,
 		sdktrace.WithResource(resource),
