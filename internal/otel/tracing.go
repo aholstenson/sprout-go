@@ -18,6 +18,9 @@ import (
 type traceConfig struct {
 	// Log is a flag that enables logging of traces.
 	Log bool `env:"LOG"`
+
+	// SampleRate is the rate at which traces should be sampled.
+	SampleRate *float64 `env:"SAMPLE_RATE"`
 }
 
 // setupTracing configures OpenTelemetry tracing.
@@ -32,6 +35,17 @@ func setupTracing(
 	otel.SetTextMapPropagator(autoprop.NewTextMapPropagator())
 
 	var exportingOption sdktrace.TracerProviderOption
+
+	// Get the sample rate and validate that tracing is enabled
+	sampleRate := 1.0
+	if config.SampleRate != nil {
+		sampleRate = *config.SampleRate
+	}
+
+	if sampleRate <= 0 {
+		logger.Warn("Sample rate is less than or equal to 0, disabling tracing")
+		return noopTracing()
+	}
 
 	if config.Log {
 		// If tracing development mode is enabled, we want to log the
@@ -57,10 +71,18 @@ func setupTracing(
 		})
 	}
 
-	// TODO: Support for sampling
+	var sampler sdktrace.Sampler
+	if sampleRate >= 1 {
+		// If the sample rate is 1 or more, we always sample
+		sampler = sdktrace.ParentBased(sdktrace.AlwaysSample())
+	} else {
+		sampler = sdktrace.ParentBased(sdktrace.TraceIDRatioBased(sampleRate))
+	}
+
 	tp := sdktrace.NewTracerProvider(
 		exportingOption,
 		sdktrace.WithResource(resource),
+		sdktrace.WithSampler(sampler),
 	)
 	otel.SetTracerProvider(tp)
 
