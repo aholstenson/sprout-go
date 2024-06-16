@@ -16,8 +16,8 @@ import (
 )
 
 type traceConfig struct {
-	// Development is a flag that enables logging of traces in development mode.
-	Development bool `env:"DEVELOPMENT"`
+	// Log is a flag that enables logging of traces.
+	Log bool `env:"LOG"`
 }
 
 // setupTracing configures OpenTelemetry tracing.
@@ -33,21 +33,13 @@ func setupTracing(
 
 	var exportingOption sdktrace.TracerProviderOption
 
-	if service.Development || service.Testing {
-		// If running in development or testing mode, we don't want to send
-		// any traces to the collector
-		if config.Development {
-			// If tracing development mode is enabled, we want to log the
-			// traces
-			logger.Info("Traces enabled for development mode, logging traces")
-			exportingOption = sdktrace.WithSyncer(&loggingTraceExporter{
-				logger: logger.Named("trace"),
-			})
-		} else {
-			// In other cases we use a no-op tracer provider
-			logger.Info("Disabling tracing due to development mode")
-			return noopTracing()
-		}
+	if config.Log {
+		// If tracing development mode is enabled, we want to log the
+		// traces
+		logger.Info("Traces enabled for development mode, logging traces")
+		exportingOption = sdktrace.WithSyncer(&loggingTraceExporter{
+			logger: logger.Named("trace"),
+		})
 	} else {
 		if !hasExporterEndpoint(true) {
 			logger.Warn("No tracing exporter endpoint set, disabling tracing")
