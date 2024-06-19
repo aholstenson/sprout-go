@@ -7,7 +7,7 @@ toolchain go1.22.2
 require (
 	github.com/KimMachineGun/automemlimit v0.6.1
 	github.com/alexliesenfeld/health v0.8.0
-	github.com/caarlos0/env/v9 v9.0.0
+	github.com/caarlos0/env/v11 v11.1.0
 	github.com/go-logr/logr v1.4.2
 	github.com/go-logr/zapr v1.3.0
 	github.com/onsi/ginkgo/v2 v2.19.0

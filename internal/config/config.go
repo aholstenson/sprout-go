@@ -3,7 +3,7 @@ package config
 import (
 	"reflect"
 
-	"github.com/caarlos0/env/v9"
+	"github.com/caarlos0/env/v11"
 	"github.com/go-logr/logr"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
