@@ -2,7 +2,15 @@ package sprout
 
 import (
 	"github.com/levelfourab/sprout-go/internal/logging"
+	"go.uber.org/zap"
 )
+
+// CreateLogger creates a logger with a name. This is provided as an
+// alternative to defining loggers in your module with fx.Provide via
+// sprout.Logger.
+func CreateLogger(name ...string) *zap.Logger {
+	return logging.CreateLogger(zap.L(), name)
+}
 
 // Logger creates a function that can be used to create a logger with a name.
 // Can be used with fx.Decorate or fx.Provide.
@@ -14,7 +22,7 @@ import (
 //
 //	var Module = fx.Module(
 //		"example",
-//		fx.Decorate(sprout.Logger("name", "of", "logger")),
+//		fx.Provide(sprout.Logger("name", "of", "logger"), fx.PRivate),
 //		fx.Invoke(func(logger *zap.Logger) {
 //			// ...
 //		}),
@@ -33,7 +41,7 @@ func Logger(name ...string) any {
 //
 //	var Module = fx.Module(
 //		"example",
-//		fx.Decorate(sprout.SugaredLogger("name", "of", "logger")),
+//		fx.Provide(sprout.SugaredLogger("name", "of", "logger"), fx.Private),
 //		fx.Invoke(func(logger *zap.SugaredLogger) {
 //			// ...
 //		}),
@@ -52,7 +60,7 @@ func SugaredLogger(name ...string) any {
 //
 //	var Module = fx.Module(
 //		"example",
-//		fx.Decorate(sprout.LogrLogger("name", "of", "logger")),
+//		fx.Provide(sprout.LogrLogger("name", "of", "logger"), fx.Private),
 //		fx.Invoke(func(logger logr.Logger) {
 //			// ...
 //		}),
