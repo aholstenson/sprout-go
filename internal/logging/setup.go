@@ -25,7 +25,7 @@ func CreateRootLogger() (*zap.Logger, error) {
 func createDevelopmentCore() zapcore.Core {
 	config := prettyconsole.NewEncoderConfig()
 	encoder := prettyconsole.NewEncoder(config)
-	return zapcore.NewCore(encoder, os.Stderr, zap.DebugLevel)
+	return zapcore.NewCore(encoder, os.Stderr, zap.InfoLevel)
 }
 
 func createProductionCore() zapcore.Core {

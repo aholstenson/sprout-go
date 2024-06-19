@@ -44,7 +44,9 @@ func (s *Sprout) With(options ...fx.Option) *fx.App {
 
 	allOptions := []fx.Option{
 		fx.WithLogger(func() fxevent.Logger {
-			return &fxevent.ZapLogger{Logger: logger.Named("fx")}
+			return &fxevent.ZapLogger{
+				Logger: logging.CreateLogger(logger, []string{"fx"}),
+			}
 		}),
 		fx.Supply(internal.ServiceInfo{
 			Name:        s.name,
