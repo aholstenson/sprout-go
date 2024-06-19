@@ -1,10 +1,11 @@
 package config
 
 import (
+	"errors"
 	"reflect"
 
-	"github.com/caarlos0/env/v9"
-	"github.com/go-logr/logr"
+	"github.com/caarlos0/env/v11"
+	"github.com/levelfourab/sprout-go/internal/logging"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -12,8 +13,7 @@ import (
 type In struct {
 	fx.In
 
-	Logger     *zap.Logger  `optional:"true"`
-	LogrLogger *logr.Logger `optional:"true"`
+	Logger *zap.Logger `optional:"true"`
 }
 
 // Config will read configuration from the environment and provide the
@@ -24,11 +24,17 @@ func Config[T any](prefix string, value T) any {
 	}
 
 	return func(in In) (T, error) {
-		var config = value
+		config := value
+
+		logger := in.Logger
+		if logger == nil {
+			// No logger provided, use the default logger
+			logger = logging.CreateLogger(zap.L(), []string{"config"})
+		}
 
 		opts := env.Options{
 			Prefix: prefix,
-			OnSet:  logFunc(in),
+			OnSet:  logFunc(logger),
 		}
 
 		var err error
@@ -38,7 +44,14 @@ func Config[T any](prefix string, value T) any {
 			err = env.ParseWithOptions(&config, opts)
 		}
 
-		if err != nil {
+		var aggregateError env.AggregateError
+		if errors.As(err, &aggregateError) {
+			for _, err := range aggregateError.Errors {
+				logError(logger, err)
+			}
+
+			return config, errors.New("failed to load configuration")
+		} else if err != nil {
 			return config, err
 		}
 
@@ -46,28 +59,36 @@ func Config[T any](prefix string, value T) any {
 	}
 }
 
-func logFunc(in In) func(tag string, value interface{}, isDefault bool) {
-	if in.Logger != nil {
-		logger := in.Logger
-		return func(tag string, value interface{}, isDefault bool) {
-			if !isDefault {
-				logger.Info("Read config value", zap.String("key", tag), zap.Any("value", value))
-			} else {
-				logger.Debug("Config value set to default", zap.String("key", tag), zap.Any("value", value))
-			}
-		}
-	} else if in.LogrLogger != nil {
-		logger := in.LogrLogger
-		return func(tag string, value interface{}, isDefault bool) {
-			if !isDefault {
-				logger.Info("Read config value", "key", tag, "value", value)
-			} else {
-				logger.V(1).Info("Config value set to default", "key", tag, "value", value)
-			}
+func logFunc(logger *zap.Logger) func(tag string, value interface{}, isDefault bool) {
+	return func(tag string, value interface{}, isDefault bool) {
+		if !isDefault {
+			logger.Info("Read config value", zap.String("key", tag), zap.Any("value", value))
+		} else {
+			logger.Info("Config value set to default", zap.String("key", tag), zap.Any("value", value))
 		}
 	}
+}
 
-	return func(tag string, value interface{}, isDefault bool) {}
+func logError(logger *zap.Logger, err error) {
+	var parseError env.ParseError
+	if errors.As(err, &parseError) {
+		logger.Error("Failed to parse configuration value", zap.String("key", parseError.Name), zap.Error(parseError.Err))
+		return
+	}
+
+	var envVarIsNotSetError env.EnvVarIsNotSetError
+	if errors.As(err, &envVarIsNotSetError) {
+		logger.Error("Required environment variable is not set", zap.String("key", envVarIsNotSetError.Key))
+		return
+	}
+
+	var emptyEnvVarError env.EmptyEnvVarError
+	if errors.As(err, &emptyEnvVarError) {
+		logger.Error("Environment variable should not be empty", zap.String("key", emptyEnvVarError.Key))
+		return
+	}
+
+	logger.Error("Failed to parse configuration", zap.Error(err))
 }
 
 // BindConfig is an on-demand version of Config. It will read configuration
