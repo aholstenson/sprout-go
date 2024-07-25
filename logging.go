@@ -68,3 +68,22 @@ func SugaredLogger(name ...string) any {
 func LogrLogger(name ...string) any {
 	return logging.LogrLogger(name...)
 }
+
+// SlogLogger creates a function that can be used to create a log/slog logger
+// with a name. Can be used with fx.Decorate or fx.Provide.
+//
+// It is mostly used when creating a module, to supply a log/slog logger to
+// libraries that require it.
+//
+// Example:
+//
+//	var Module = fx.Module(
+//		"example",
+//		fx.Provide(sprout.SlogLogger("name", "of", "logger"), fx.Private),
+//		fx.Invoke(func(logger *slog.Logger) {
+//			// ...
+//		}),
+//	)
+func SlogLogger(name ...string) any {
+	return logging.SlogLogger(name...)
+}

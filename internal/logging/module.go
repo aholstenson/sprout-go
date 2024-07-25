@@ -21,7 +21,6 @@ func Module(logger *zap.Logger) fx.Option {
 				},
 			})
 
-			zap.ReplaceGlobals(logger)
 			return logger
 		}, fx.ResultTags(`name:"logging.zap"`))),
 		fx.Provide(fx.Annotate(

@@ -1,6 +1,7 @@
 package sprout
 
 import (
+	"log/slog"
 	"os"
 
 	"github.com/levelfourab/sprout-go/internal"
@@ -11,6 +12,7 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
+	"go.uber.org/zap/exp/zapslog"
 )
 
 type Sprout struct {
@@ -28,7 +30,13 @@ func New(name string, version string) *Sprout {
 		os.Stderr.WriteString("Unable to bootstrap: " + err.Error() + "\n")
 		os.Exit(1)
 	}
+	zap.ReplaceGlobals(logger)
 
+	// Integrate with log/slog
+	slogLogger := slog.New(zapslog.NewHandler(logger.Core(), nil))
+	slog.SetDefault(slogLogger)
+
+	// Continue bootstrapping
 	logger.Info("Starting application", zap.String("name", name), zap.String("version", version))
 	runtime.Setup(logger)
 	return &Sprout{

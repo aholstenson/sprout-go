@@ -25,6 +25,7 @@ require (
 	go.uber.org/automaxprocs v1.5.3
 	go.uber.org/fx v1.22.0
 	go.uber.org/zap v1.27.0
+	go.uber.org/zap/exp v0.2.0
 )
 
 require (

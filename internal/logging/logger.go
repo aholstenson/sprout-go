@@ -1,12 +1,14 @@
 package logging
 
 import (
+	"log/slog"
 	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
+	"go.uber.org/zap/exp/zapslog"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -40,5 +42,14 @@ func LogrLogger(name ...string) any {
 	return fx.Annotate(func(logger *zap.Logger) logr.Logger {
 		childLogger := CreateLogger(logger, name)
 		return zapr.NewLogger(childLogger)
+	}, fx.ParamTags(`name:"logging.zap"`))
+}
+
+func SlogLogger(name ...string) any {
+	return fx.Annotate(func(logger *zap.Logger) *slog.Logger {
+		logger = CreateLogger(logger, name)
+		return slog.New(zapslog.NewHandler(logger.Core(), &zapslog.HandlerOptions{
+			LoggerName: logger.Name(),
+		}))
 	}, fx.ParamTags(`name:"logging.zap"`))
 }
