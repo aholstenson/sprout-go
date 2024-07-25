@@ -62,7 +62,7 @@ func Config[T any](prefix string, value T) any {
 func logFunc(logger *zap.Logger) func(tag string, value interface{}, isDefault bool) {
 	return func(tag string, value interface{}, isDefault bool) {
 		if !isDefault {
-			logger.Info("Read config value", zap.String("key", tag), zap.Any("value", value))
+			logger.Info("Read config value from environment", zap.String("key", tag))
 		} else {
 			logger.Info("Config value set to default", zap.String("key", tag), zap.Any("value", value))
 		}
