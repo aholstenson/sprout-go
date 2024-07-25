@@ -163,11 +163,13 @@ integration:
 | -------- | ----------- | ------- |
 | `OTEL_PROPAGATORS` | The default propagators to use | `tracecontext,baggage` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | The endpoint to send traces, metrics and logs to |  |
-| `OTEL_EXPORTER_OTLP_TIMEOUT` | The timeout for sending data | `10s` |
+| `OTEL_EXPORTER_OTLP_TIMEOUT` | The timeout in seconds for sending data | `10` |
 | `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Custom endpoint to send traces to, overrides `OTEL_EXPORTER_OTLP_ENDPOINT` |  |
-| `OTEL_EXPORTER_OTLP_TRACES_TIMEOUT` | Custom timeout for sending traces | `10s` |
+| `OTEL_EXPORTER_OTLP_TRACES_TIMEOUT` | Custom timeout in seconds for sending traces | `10` |
 | `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Custom endpoint to send metrics to, overrides `OTEL_EXPORTER_OTLP_ENDPOINT` |  |
-| `OTEL_EXPORTER_OTLP_METRICS_TIMEOUT` | Custom timeout for sending metrics | `10s` |
+| `OTEL_EXPORTER_OTLP_METRICS_TIMEOUT` | Custom timeout in seconds for sending metrics | `10` |
+| `OTEL_METRIC_EXPORT_INTERVAL` | The interval in seconds to export metrics | `60` |
+| `OTEL_METRIC_EXPORT_TIMEOUT` | The timeout in seconds for exporting metrics | `30` |
 | `OTEL_TRACING_LOG` | Enable logging mode for tracing | `false` |
 
 OTLP exporting is disabled by default. You can enable logging of traces which
