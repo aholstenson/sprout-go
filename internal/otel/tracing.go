@@ -17,10 +17,10 @@ import (
 
 type traceConfig struct {
 	// Log is a flag that enables logging of traces.
-	Log bool `env:"LOG"`
+	Log bool `env:"LOG" envDefault:"false"`
 
 	// SampleRate is the rate at which traces should be sampled.
-	SampleRate *float64 `env:"SAMPLE_RATE"`
+	SampleRate float64 `env:"SAMPLE_RATE" envDefault:"1.0"`
 }
 
 // setupTracing configures OpenTelemetry tracing.
@@ -37,10 +37,7 @@ func setupTracing(
 	var exportingOption sdktrace.TracerProviderOption
 
 	// Get the sample rate and validate that tracing is enabled
-	sampleRate := 1.0
-	if config.SampleRate != nil {
-		sampleRate = *config.SampleRate
-	}
+	sampleRate := config.SampleRate
 
 	if sampleRate <= 0 {
 		logger.Warn("Sample rate is less than or equal to 0, disabling tracing")
