@@ -3,7 +3,7 @@ package logging
 import (
 	"os"
 
-	"github.com/levelfourab/sprout-go/internal"
+	"github.com/aholstenson/sprout-go/internal"
 	prettyconsole "github.com/thessem/zap-prettyconsole"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

@@ -1,7 +1,7 @@
 package sprout
 
 import (
-	"github.com/levelfourab/sprout-go/internal/logging"
+	"github.com/aholstenson/sprout-go/internal/logging"
 	"go.uber.org/zap"
 )
 

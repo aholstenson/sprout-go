@@ -1,8 +1,8 @@
 package config_test
 
 import (
-	"github.com/levelfourab/sprout-go/internal/config"
-	"github.com/levelfourab/sprout-go/internal/logging"
+	"github.com/aholstenson/sprout-go/internal/config"
+	"github.com/aholstenson/sprout-go/internal/logging"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/fx"

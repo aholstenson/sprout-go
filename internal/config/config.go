@@ -5,7 +5,7 @@ import (
 	"reflect"
 
 	"github.com/caarlos0/env/v11"
-	"github.com/levelfourab/sprout-go/internal/logging"
+	"github.com/aholstenson/sprout-go/internal/logging"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )

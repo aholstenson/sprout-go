@@ -24,7 +24,7 @@ The main of the application may look something like this:
 ```go
 package main
 
-import "github.com/levelfourab/sprout-go"
+import "github.com/aholstenson/sprout-go"
 
 func main() {
   sprout.New("ExampleApp", "v1.0.0").With(
@@ -38,7 +38,7 @@ The module can then be defined like this:
 ```go
 package example
 
-import "github.com/levelfourab/sprout-go"
+import "github.com/aholstenson/sprout-go"
 import "go.uber.org/fx"
 
 type Config struct {

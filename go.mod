@@ -1,4 +1,4 @@
-module github.com/levelfourab/sprout-go
+module github.com/aholstenson/sprout-go
 
 go 1.22
 

@@ -1,7 +1,7 @@
 package sprout
 
 import (
-	"github.com/levelfourab/sprout-go/internal/health"
+	"github.com/aholstenson/sprout-go/internal/health"
 )
 
 type HealthCheck = health.Check

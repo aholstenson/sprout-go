@@ -5,8 +5,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/levelfourab/sprout-go/internal/health"
-	"github.com/levelfourab/sprout-go/internal/logging"
+	"github.com/aholstenson/sprout-go/internal/health"
+	"github.com/aholstenson/sprout-go/internal/logging"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/fx"

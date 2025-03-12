@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	"github.com/levelfourab/sprout-go"
+	"github.com/aholstenson/sprout-go"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/fx"
 	"go.uber.org/zap"

@@ -1,7 +1,7 @@
 package sprout
 
 import (
-	"github.com/levelfourab/sprout-go/internal/config"
+	"github.com/aholstenson/sprout-go/internal/config"
 )
 
 // Config will read configuration from the environment and provide the

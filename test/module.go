@@ -1,10 +1,10 @@
 package test
 
 import (
-	"github.com/levelfourab/sprout-go/internal"
-	"github.com/levelfourab/sprout-go/internal/health"
-	"github.com/levelfourab/sprout-go/internal/logging"
-	"github.com/levelfourab/sprout-go/internal/otel"
+	"github.com/aholstenson/sprout-go/internal"
+	"github.com/aholstenson/sprout-go/internal/health"
+	"github.com/aholstenson/sprout-go/internal/logging"
+	"github.com/aholstenson/sprout-go/internal/otel"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap/zaptest"
