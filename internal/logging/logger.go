@@ -48,8 +48,7 @@ func LogrLogger(name ...string) any {
 func SlogLogger(name ...string) any {
 	return fx.Annotate(func(logger *zap.Logger) *slog.Logger {
 		logger = CreateLogger(logger, name)
-		return slog.New(zapslog.NewHandler(logger.Core(), &zapslog.HandlerOptions{
-			LoggerName: logger.Name(),
-		}))
+		handler := zapslog.NewHandler(logger.Core(), zapslog.WithName(logger.Name()))
+		return slog.New(handler)
 	}, fx.ParamTags(`name:"logging.zap"`))
 }

@@ -33,7 +33,7 @@ func New(name string, version string) *Sprout {
 	zap.ReplaceGlobals(logger)
 
 	// Integrate with log/slog
-	slogLogger := slog.New(zapslog.NewHandler(logger.Core(), nil))
+	slogLogger := slog.New(zapslog.NewHandler(logger.Core()))
 	slog.SetDefault(slogLogger)
 
 	// Continue bootstrapping

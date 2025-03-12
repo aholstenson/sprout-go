@@ -1,6 +1,8 @@
 package logging_test
 
 import (
+	"log/slog"
+
 	"github.com/aholstenson/sprout-go/internal/logging"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -59,6 +61,25 @@ var _ = Describe("Logging", func() {
 				t,
 				logging.Module(zaptest.NewLogger(t)),
 				fx.Provide(logging.LogrLogger("test")),
+				fx.Populate(&logger),
+			)
+
+			app.RequireStart()
+			defer app.RequireStop()
+
+			Expect(logger).ToNot(BeNil())
+		})
+	})
+
+	Describe("slog.Logger", func() {
+		It("should be able to provide named *slog.Logger", func() {
+			t := GinkgoT()
+
+			var logger *slog.Logger
+			app := fxtest.New(
+				t,
+				logging.Module(zaptest.NewLogger(t)),
+				fx.Provide(logging.SlogLogger("test")),
 				fx.Populate(&logger),
 			)
 
