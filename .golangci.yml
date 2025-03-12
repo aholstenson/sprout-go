@@ -45,7 +45,6 @@ linters:
   - nolintlint
   - revive
   - staticcheck
-  - typecheck
   - unconvert
   - unparam
   - unused
