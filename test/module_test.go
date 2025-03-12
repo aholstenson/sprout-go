@@ -1,9 +1,9 @@
 package test_test
 
 import (
-	"github.com/go-logr/logr"
 	"github.com/aholstenson/sprout-go"
 	"github.com/aholstenson/sprout-go/test"
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.opentelemetry.io/otel/metric"

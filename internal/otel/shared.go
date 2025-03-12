@@ -4,9 +4,9 @@ import (
 	"context"
 	"os"
 
-	"github.com/go-logr/logr"
 	"github.com/aholstenson/sprout-go/internal/config"
 	"github.com/aholstenson/sprout-go/internal/logging"
+	"github.com/go-logr/logr"
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"

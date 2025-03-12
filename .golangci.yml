@@ -34,7 +34,7 @@ linters:
   - exhaustive
   - goconst
   - gocyclo
-  - gofmt
+  - gofumpt
   - goimports
   - goprintffuncname
   - gosimple

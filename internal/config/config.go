@@ -4,8 +4,8 @@ import (
 	"errors"
 	"reflect"
 
-	"github.com/caarlos0/env/v11"
 	"github.com/aholstenson/sprout-go/internal/logging"
+	"github.com/caarlos0/env/v11"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )

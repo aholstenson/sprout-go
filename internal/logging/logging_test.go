@@ -1,8 +1,8 @@
 package logging_test
 
 import (
-	"github.com/go-logr/logr"
 	"github.com/aholstenson/sprout-go/internal/logging"
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/fx"
