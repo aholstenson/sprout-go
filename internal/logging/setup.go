@@ -2,12 +2,22 @@ package logging
 
 import (
 	"os"
+	"time"
 
 	"github.com/aholstenson/sprout-go/internal"
+	"github.com/caarlos0/env/v11"
 	prettyconsole "github.com/thessem/zap-prettyconsole"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
+
+type logConfig struct {
+	FileOutput string `env:"LOG_FILE_OUTPUT"`
+	Sampling   struct {
+		Initial    int `env:"LOG_SAMPLING_INITIAL" envDefault:"100"`
+		Thereafter int `env:"LOG_SAMPLING_THEREAFTER" envDefault:"100"`
+	} `env:"LOG_SAMPLING"`
+}
 
 // CreateRootLogger creates the root logger of the application.
 func CreateRootLogger() (*zap.Logger, error) {
@@ -18,8 +28,13 @@ func CreateRootLogger() (*zap.Logger, error) {
 		cores = append(cores, createProductionCore())
 	}
 
-	if logFile := os.Getenv("LOG_FILE_OUTPUT"); logFile != "" {
-		fileCore, err := createFileCore(logFile)
+	config, err := env.ParseAs[logConfig]()
+	if err != nil {
+		return nil, err
+	}
+
+	if config.FileOutput != "" {
+		fileCore, err := createFileCore(config.FileOutput)
 		if err != nil {
 			return nil, err
 		}
@@ -28,7 +43,20 @@ func CreateRootLogger() (*zap.Logger, error) {
 	}
 
 	// TODO: Connect to OpenTelemetry Collector
-	logger := zap.New(zapcore.NewTee(cores...))
+
+	core := zapcore.NewTee(cores...)
+
+	if config.Sampling.Initial > 0 {
+		// Setup sampling if not disabled
+		core = zapcore.NewSamplerWithOptions(
+			core,
+			time.Second,
+			config.Sampling.Initial,
+			config.Sampling.Thereafter,
+		)
+	}
+
+	logger := zap.New(core)
 	return logger, nil
 }
 
