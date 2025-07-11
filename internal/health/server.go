@@ -80,7 +80,10 @@ func (s *Server) Start() error {
 	s.httpListener = ln
 
 	s.httpServer = &http.Server{
-		Handler: mux,
+		Handler:      mux,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 5 * time.Second,
+		IdleTimeout:  5 * time.Second,
 	}
 
 	go func() {
@@ -103,10 +106,13 @@ func newChecker(logger *zap.Logger, checks []Check) health.Checker {
 	options := []health.CheckerOption{
 		health.WithTimeout(5 * time.Second),
 		health.WithStatusListener(func(ctx context.Context, state health.CheckerState) {
-			if state.Status == health.StatusDown {
+			switch state.Status {
+			case health.StatusDown:
 				logger.Info("Health status changed", zap.String("state", "down"))
-			} else if state.Status == health.StatusUp {
+			case health.StatusUp:
 				logger.Info("Health status changed", zap.String("state", "up"))
+			case health.StatusUnknown:
+				// Unknown should not be logged
 			}
 		}),
 		health.WithInterceptors(func(next health.InterceptorFunc) health.InterceptorFunc {
@@ -115,10 +121,13 @@ func newChecker(logger *zap.Logger, checks []Check) health.Checker {
 				result := next(ctx, name, state)
 
 				if currentStatus != result.Status {
-					if result.Status == health.StatusUp {
+					switch result.Status {
+					case health.StatusUp:
 						logger.Info("Health check marked as healthy", zap.String("name", name))
-					} else if result.Status == health.StatusDown {
+					case health.StatusDown:
 						logger.Info("Health check marked as unhealthy", zap.String("name", name))
+					case health.StatusUnknown:
+						// Unknown should not be logged
 					}
 				}
 				return result

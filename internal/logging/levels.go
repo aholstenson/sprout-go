@@ -23,7 +23,7 @@ func determineLevel(name []string) zapcore.Level {
 
 // levelFromEnv returns the log level from the environment variable
 func levelFromEnv(name []string) zapcore.Level {
-	levelName := "LOG_LEVEL_" + strings.Replace(strings.ToUpper(strings.Join(name, "_")), ".", "_", -1)
+	levelName := "LOG_LEVEL_" + strings.ReplaceAll(strings.ToUpper(strings.Join(name, "_")), ".", "_")
 	value := os.Getenv(levelName)
 	if value == "" {
 		return zapcore.InvalidLevel

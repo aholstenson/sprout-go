@@ -27,7 +27,7 @@ type Sprout struct {
 func New(name string, version string) *Sprout {
 	logger, err := logging.CreateRootLogger()
 	if err != nil {
-		os.Stderr.WriteString("Unable to bootstrap: " + err.Error() + "\n")
+		_, _ = os.Stderr.WriteString("Unable to bootstrap: " + err.Error() + "\n")
 		os.Exit(1)
 	}
 	zap.ReplaceGlobals(logger)
