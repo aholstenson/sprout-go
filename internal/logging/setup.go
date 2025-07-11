@@ -11,14 +11,24 @@ import (
 
 // CreateRootLogger creates the root logger of the application.
 func CreateRootLogger() (*zap.Logger, error) {
-	var core zapcore.Core
+	var cores []zapcore.Core
 	if internal.CheckIfDevelopment() {
-		core = createDevelopmentCore()
+		cores = append(cores, createDevelopmentCore())
 	} else {
-		core = createProductionCore()
+		cores = append(cores, createProductionCore())
 	}
 
-	logger := zap.New(core)
+	if logFile := os.Getenv("LOG_FILE_OUTPUT"); logFile != "" {
+		fileCore, err := createFileCore(logFile)
+		if err != nil {
+			return nil, err
+		}
+
+		cores = append(cores, fileCore)
+	}
+
+	// TODO: Connect to OpenTelemetry Collector
+	logger := zap.New(zapcore.NewTee(cores...))
 	return logger, nil
 }
 
@@ -29,8 +39,18 @@ func createDevelopmentCore() zapcore.Core {
 }
 
 func createProductionCore() zapcore.Core {
-	// TODO: Connect to OpenTelemetry Collector
 	config := zap.NewProductionEncoderConfig()
 	encoder := zapcore.NewJSONEncoder(config)
 	return zapcore.NewCore(encoder, os.Stderr, zap.InfoLevel)
+}
+
+func createFileCore(logFile string) (zapcore.Core, error) {
+	file, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o666)
+	if err != nil {
+		return nil, err
+	}
+
+	config := zap.NewProductionEncoderConfig()
+	encoder := zapcore.NewJSONEncoder(config)
+	return zapcore.NewCore(encoder, zapcore.AddSync(file), zap.InfoLevel), nil
 }
