@@ -1,51 +1,70 @@
-issues:
-  exclude-rules:
-    - path: (.+)_test.go
-      linters:
-        - dupl
-    - linters:
-        - revive
-        - stylecheck
-      text: dot imports
-      source: gomega
-    - linters:
-        - revive
-        - stylecheck
-      text: dot imports
-      source: ginkgo
+version: "2"
 
-linters-settings:
-  revive:
-    rules:
-      - name: 'unused-parameter'
-        disabled: true
-  misspell:
-    locale: US
+formatters:
+  enable:
+    - goimports
+    - gofumpt
 
 linters:
-  disable-all: true
+  default: none
   enable:
   - bodyclose
   - contextcheck
   - dogsled
-  - dupl
   - errcheck
+  - errname
   - exhaustive
   - goconst
   - gocyclo
-  - gofumpt
-  - goimports
   - goprintffuncname
-  - gosimple
+  - gosec
   - govet
   - ineffassign
   - misspell
   - nakedret
+  - makezero
+  - nilerr
+  - nilnil
   - noctx
   - nolintlint
+  - prealloc
+  - predeclared
   - revive
+  - spancheck
   - staticcheck
   - unconvert
   - unparam
   - unused
   - whitespace
+  settings:
+    gosec:
+      excludes:
+        - G601
+    misspell:
+      locale: US
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+        - name: package-comments
+          disabled: true
+        - name: unused-parameter
+          disabled: true
+  exclusions:
+    rules:
+      - path: (.+)_test.go
+        linters:
+          - dupl
+      - linters:
+          - revive
+          - stylecheck
+        text: dot imports
+        source: gomega
+      - linters:
+          - revive
+          - stylecheck
+        text: dot imports
+        source: ginkgo
+      - linters:
+          - staticcheck
+        text: 'QF1006' # could lift into loop condition
