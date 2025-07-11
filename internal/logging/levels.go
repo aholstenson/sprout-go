@@ -9,11 +9,22 @@ import (
 
 // determineLevel determines the log level by checking for environment
 // variables like LOG_LEVEL_NAMEPART1_NAMEPART2, LOG_LEVEL_NAMEPART1 etc.
+// Lastly checking LOG_LEVEL for the root logger.
+//
 // If no environment variable is found, it returns the INFO level.
 func determineLevel(name []string) zapcore.Level {
 	for i := len(name); i > 0; i-- {
 		level := levelFromEnv(name[:i])
 		if level != zapcore.InvalidLevel {
+			return level
+		}
+	}
+
+	// Check for root LOG_LEVEL environment variable
+	value := os.Getenv("LOG_LEVEL")
+	if value != "" {
+		level, err := zapcore.ParseLevel(value)
+		if err == nil {
 			return level
 		}
 	}
@@ -51,11 +62,11 @@ func (c *levelChangingCore) With(fields []zapcore.Field) zapcore.Core {
 }
 
 func (c *levelChangingCore) Check(entry zapcore.Entry, checkedEntry *zapcore.CheckedEntry) *zapcore.CheckedEntry {
-	if !c.Enabled(entry.Level) {
-		return checkedEntry
+	if c.Enabled(entry.Level) {
+		return checkedEntry.AddCore(entry, c.core)
 	}
 
-	return c.core.Check(entry, checkedEntry)
+	return checkedEntry
 }
 
 func (c *levelChangingCore) Write(entry zapcore.Entry, fields []zapcore.Field) error {
