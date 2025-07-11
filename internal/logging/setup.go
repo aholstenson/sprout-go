@@ -21,9 +21,12 @@ type logConfig struct {
 
 // CreateRootLogger creates the root logger of the application.
 func CreateRootLogger() (*zap.Logger, error) {
+	opts := []zap.Option{zap.AddCaller(), zap.AddStacktrace(zap.ErrorLevel)}
 	var cores []zapcore.Core
+
 	if internal.CheckIfDevelopment() {
 		cores = append(cores, createDevelopmentCore())
+		opts = append(opts, zap.Development())
 	} else {
 		cores = append(cores, createProductionCore())
 	}
@@ -56,7 +59,7 @@ func CreateRootLogger() (*zap.Logger, error) {
 		)
 	}
 
-	logger := zap.New(core)
+	logger := zap.New(core, opts...)
 	return logger, nil
 }
 
