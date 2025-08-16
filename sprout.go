@@ -7,7 +7,6 @@ import (
 	"github.com/aholstenson/sprout-go/internal"
 	"github.com/aholstenson/sprout-go/internal/health"
 	"github.com/aholstenson/sprout-go/internal/logging"
-	"github.com/aholstenson/sprout-go/internal/otel"
 	"github.com/aholstenson/sprout-go/internal/runtime"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
@@ -18,14 +17,20 @@ import (
 type Sprout struct {
 	logger *zap.Logger
 
-	name    string
-	version string
+	serviceInfo internal.ServiceInfo
 }
 
 // New creates a new Sprout application. The name and version will be used to
 // identify the application in logs, traces and metrics.
 func New(name string, version string) *Sprout {
-	logger, err := logging.CreateRootLogger()
+	serviceInfo := internal.ServiceInfo{
+		Name:        name,
+		Version:     version,
+		Development: internal.CheckIfDevelopment(),
+		Testing:     false,
+	}
+
+	logger, err := logging.CreateRootLogger(serviceInfo)
 	if err != nil {
 		_, _ = os.Stderr.WriteString("Unable to bootstrap: " + err.Error() + "\n")
 		os.Exit(1)
@@ -40,9 +45,8 @@ func New(name string, version string) *Sprout {
 	logger.Info("Starting application", zap.String("name", name), zap.String("version", version))
 	runtime.Setup(logger)
 	return &Sprout{
-		logger:  logger,
-		name:    name,
-		version: version,
+		logger:      logger,
+		serviceInfo: serviceInfo,
 	}
 }
 
@@ -56,14 +60,9 @@ func (s *Sprout) With(options ...fx.Option) *fx.App {
 				Logger: logging.CreateLogger(logger, []string{"fx"}),
 			}
 		}),
-		fx.Supply(internal.ServiceInfo{
-			Name:        s.name,
-			Version:     s.version,
-			Development: internal.CheckIfDevelopment(),
-			Testing:     false,
-		}),
+		fx.Supply(s.serviceInfo),
 		logging.Module(logger),
-		otel.Module,
+		otelModule,
 		health.Module,
 	}
 

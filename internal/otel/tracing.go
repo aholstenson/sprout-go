@@ -3,6 +3,7 @@ package otel
 import (
 	"context"
 
+	"github.com/caarlos0/env/v11"
 	"go.opentelemetry.io/contrib/propagators/autoprop"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -23,16 +24,22 @@ type traceConfig struct {
 	SampleRate float64 `env:"SAMPLE_RATE" envDefault:"1.0"`
 }
 
-// setupTracing configures OpenTelemetry tracing.
-func setupTracing(
-	service ServiceInfo,
+// SetupTracing configures OpenTelemetry tracing.
+func SetupTracing(
 	resource *resource.Resource,
 	lifecycle fx.Lifecycle,
 	logger *zap.Logger,
-	config traceConfig,
 ) (trace.TracerProvider, error) {
 	// Set a better default for propagators, since the default is a no-op
 	otel.SetTextMapPropagator(autoprop.NewTextMapPropagator())
+
+	// Load the tracing configuration
+	config, err := env.ParseAsWithOptions[traceConfig](env.Options{
+		Prefix: "OTEL_TRACING_",
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	var exportingOption sdktrace.TracerProviderOption
 
