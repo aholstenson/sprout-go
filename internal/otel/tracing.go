@@ -59,7 +59,7 @@ func SetupTracing(
 			logger: logger.Named("trace"),
 		})
 	} else {
-		if !hasExporterEndpoint(true) {
+		if !hasExporterEndpoint(moduleTracing) {
 			logger.Warn("No tracing exporter endpoint set, disabling tracing")
 			return noopTracing()
 		}

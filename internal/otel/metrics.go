@@ -19,7 +19,7 @@ func SetupMetrics(
 	lifecycle fx.Lifecycle,
 	logger *zap.Logger,
 ) (metric.MeterProvider, error) {
-	if !hasExporterEndpoint(false) {
+	if !hasExporterEndpoint(moduleMetrics) {
 		// If no endpoint is set, we don't want to send any metrics to the
 		// collector
 		logger.Warn("No metrics exporter endpoint set, disabling metrics")

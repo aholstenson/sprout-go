@@ -5,35 +5,42 @@ import (
 	"time"
 
 	"github.com/aholstenson/sprout-go/internal"
+	"github.com/aholstenson/sprout-go/internal/otel"
 	"github.com/caarlos0/env/v11"
 	prettyconsole "github.com/thessem/zap-prettyconsole"
+	"go.opentelemetry.io/contrib/bridges/otelzap"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 type logConfig struct {
-	FileOutput string `env:"LOG_FILE_OUTPUT"`
-	Sampling   struct {
+	ConsoleOutput bool   `env:"LOG_CONSOLE_OUTPUT" envDefault:"true"`
+	FileOutput    string `env:"LOG_FILE_OUTPUT"`
+	Sampling      struct {
 		Initial    int `env:"LOG_SAMPLING_INITIAL" envDefault:"100"`
 		Thereafter int `env:"LOG_SAMPLING_THEREAFTER" envDefault:"100"`
 	} `env:"LOG_SAMPLING"`
 }
 
 // CreateRootLogger creates the root logger of the application.
-func CreateRootLogger() (*zap.Logger, error) {
+func CreateRootLogger(serviceInfo internal.ServiceInfo) (*zap.Logger, error) {
 	opts := []zap.Option{zap.AddCaller(), zap.AddStacktrace(zap.ErrorLevel)}
 	var cores []zapcore.Core
-
-	if internal.CheckIfDevelopment() {
-		cores = append(cores, createDevelopmentCore())
-		opts = append(opts, zap.Development())
-	} else {
-		cores = append(cores, createProductionCore())
-	}
 
 	config, err := env.ParseAs[logConfig]()
 	if err != nil {
 		return nil, err
+	}
+
+	if internal.CheckIfDevelopment() {
+		if config.ConsoleOutput {
+			cores = append(cores, createDevelopmentCore())
+		}
+		opts = append(opts, zap.Development())
+	} else {
+		if config.ConsoleOutput {
+			cores = append(cores, createProductionCore())
+		}
 	}
 
 	if config.FileOutput != "" {
@@ -45,7 +52,16 @@ func CreateRootLogger() (*zap.Logger, error) {
 		cores = append(cores, fileCore)
 	}
 
-	// TODO: Connect to OpenTelemetry Collector
+	// Connect to OpenTelemetry
+	provider, ok, err := otel.InitLogging(serviceInfo)
+	if err != nil {
+		return nil, err
+	} else if ok {
+		otelCore := otelzap.NewCore("global", otelzap.WithLoggerProvider(provider))
+		// Wrap the otelzap core to limit the log level to info by default,
+		// avoids debug logs from being exported by default
+		cores = append(cores, &levelChangingCore{core: otelCore, level: zap.InfoLevel})
+	}
 
 	core := zapcore.NewTee(cores...)
 
