@@ -31,17 +31,31 @@ func CreateResource(service ServiceInfo) (*resource.Resource, error) {
 	)
 }
 
-func hasExporterEndpoint(tracing bool) bool {
+type module string
+
+const (
+	moduleTracing module = "tracing"
+	moduleMetrics module = "metrics"
+	moduleLogging module = "logging"
+)
+
+func hasExporterEndpoint(module module) bool {
 	// OTEL_EXPORTER_OTLP_ENDPOINT is the default environment variable
 	if os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") != "" {
 		return true
 	}
 
-	if tracing {
+	switch module {
+	case moduleTracing:
 		// Tracing also uses OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
 		return os.Getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT") != ""
+	case moduleMetrics:
+		// Metrics uses OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+		return os.Getenv("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT") != ""
+	case moduleLogging:
+		// Logging uses OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
+		return os.Getenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT") != ""
 	}
 
-	// Metrics uses OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
-	return os.Getenv("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT") != ""
+	return false
 }
