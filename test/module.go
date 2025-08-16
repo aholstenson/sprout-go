@@ -4,9 +4,14 @@ import (
 	"github.com/aholstenson/sprout-go/internal"
 	"github.com/aholstenson/sprout-go/internal/health"
 	"github.com/aholstenson/sprout-go/internal/logging"
-	"github.com/aholstenson/sprout-go/internal/otel"
+	"go.opentelemetry.io/otel"
+	logglobal "go.opentelemetry.io/otel/log/global"
+	lognoop "go.opentelemetry.io/otel/log/noop"
+	metricnoop "go.opentelemetry.io/otel/metric/noop"
+	tracenoop "go.opentelemetry.io/otel/trace/noop"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -35,7 +40,9 @@ func Module(t TB) fx.Option {
 	logger := zaptest.NewLogger(t)
 	return fx.Options(
 		fx.WithLogger(func() fxevent.Logger {
-			return &fxevent.ZapLogger{Logger: logger.Named("fx")}
+			logger := &fxevent.ZapLogger{Logger: logger.Named("fx")}
+			logger.UseLogLevel(zap.DebugLevel)
+			return logger
 		}),
 		fx.Supply(internal.ServiceInfo{
 			Name:        "test",
@@ -44,7 +51,16 @@ func Module(t TB) fx.Option {
 			Testing:     true,
 		}),
 		logging.Module(logger),
-		otel.Module,
+		fx.Invoke(setupNoopOtel),
+		fx.Provide(otel.GetTracerProvider),
+		fx.Provide(otel.GetMeterProvider),
+		fx.Provide(logglobal.GetLoggerProvider),
 		health.Module,
 	)
+}
+
+func setupNoopOtel() {
+	otel.SetTracerProvider(tracenoop.NewTracerProvider())
+	otel.SetMeterProvider(metricnoop.NewMeterProvider())
+	logglobal.SetLoggerProvider(lognoop.NewLoggerProvider())
 }

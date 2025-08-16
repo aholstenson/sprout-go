@@ -13,8 +13,8 @@ import (
 	"go.uber.org/zap"
 )
 
-func setupMetrics(
-	service ServiceInfo,
+// SetupMetrics configures OpenTelemetry metrics.
+func SetupMetrics(
 	resource *resource.Resource,
 	lifecycle fx.Lifecycle,
 	logger *zap.Logger,
