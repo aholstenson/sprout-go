@@ -56,9 +56,8 @@ func (s *Sprout) With(options ...fx.Option) *fx.App {
 
 	allOptions := []fx.Option{
 		fx.WithLogger(func() fxevent.Logger {
-			return &fxevent.ZapLogger{
-				Logger: logging.CreateLogger(logger, []string{"fx"}),
-			}
+			fxLogLevel := os.Getenv("FX_ENABLE_DETAILED_LOGGING")
+			return logging.NewFxLogger(logger, fxLogLevel == "true")
 		}),
 		fx.Supply(s.serviceInfo),
 		logging.Module(logger),
