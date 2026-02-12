@@ -56,7 +56,7 @@ func NewServer(lifecycle fx.Lifecycle, logger *zap.Logger, serviceInfo ServiceIn
 	if enabled {
 		lifecycle.Append(fx.Hook{
 			OnStart: func(ctx context.Context) error {
-				return s.Start()
+				return s.Start(ctx)
 			},
 			OnStop: func(ctx context.Context) error {
 				return s.Stop(ctx)
@@ -76,7 +76,7 @@ func (s *Server) AddReadinessCheck(check Check) {
 	s.readinessChecks = append(s.readinessChecks, check)
 }
 
-func (s *Server) Start() error {
+func (s *Server) Start(ctx context.Context) error {
 	s.logger.Info("Starting health server", zap.Int("port", s.httpPort))
 
 	mux := &http.ServeMux{}
@@ -95,7 +95,8 @@ func (s *Server) Start() error {
 		)),
 	)
 
-	ln, err := net.Listen("tcp", ":"+strconv.Itoa(s.httpPort))
+	listenConfig := &net.ListenConfig{}
+	ln, err := listenConfig.Listen(ctx, "tcp", ":"+strconv.Itoa(s.httpPort))
 	if err != nil {
 		return err
 	}
