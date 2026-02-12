@@ -15,7 +15,7 @@ import (
 //	}
 //
 //	sprout.New("my-service", "1.0.0").With(
-//		fx.Provide(sprout.Config("HTTP", Config{})),
+//		fx.Provide(sprout.Config("HTTP", Config{}), fx.Private),
 //		fx.Invoke(func(config Config) {
 //			// ...
 //		}),
@@ -26,6 +26,12 @@ func Config[T any](prefix string, value T) any {
 
 // BindConfig is an on-demand version of Config. It will read configuration
 // from the environment and bind them to the specified struct.
-func BindConfig(prefix string, value any) any {
+func BindConfig(prefix string, value any) error {
 	return config.BindConfig(prefix, value)
+}
+
+// ReadConfig will read configuration from the environment and return the
+// specified type.
+func ReadConfig[T any](prefix string) (T, error) {
+	return config.ReadConfig[T](prefix)
 }

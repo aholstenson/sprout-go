@@ -93,17 +93,33 @@ func logError(logger *zap.Logger, err error) {
 
 // BindConfig is an on-demand version of Config. It will read configuration
 // from the environment and bind them to the specified struct.
-func BindConfig(prefix string, value any) any {
+func BindConfig(prefix string, value any) error {
 	if prefix != "" {
 		prefix += "_"
 	}
 
+	logger := logging.CreateLogger(zap.L(), []string{"config"})
+
 	err := env.ParseWithOptions(value, env.Options{
 		Prefix: prefix,
+		OnSet:  logFunc(logger),
 	})
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// ReadConfig will read configuration from the environment and return the
+// specified type.
+func ReadConfig[T any](prefix string) (T, error) {
+	var value T
+
+	err := BindConfig(prefix, &value)
+	if err != nil {
+		return value, err
+	}
+
+	return value, nil
 }
