@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.24.1
 
 require (
-	github.com/KimMachineGun/automemlimit v0.6.1
+	github.com/KimMachineGun/automemlimit v0.7.5
 	github.com/alexliesenfeld/health v0.8.1
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/go-logr/logr v1.4.3
