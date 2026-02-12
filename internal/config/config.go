@@ -76,13 +76,13 @@ func logError(logger *zap.Logger, err error) {
 		return
 	}
 
-	var envVarIsNotSetError env.EnvVarIsNotSetError
+	var envVarIsNotSetError env.VarIsNotSetError
 	if errors.As(err, &envVarIsNotSetError) {
 		logger.Error("Required environment variable is not set", zap.String("key", envVarIsNotSetError.Key))
 		return
 	}
 
-	var emptyEnvVarError env.EmptyEnvVarError
+	var emptyEnvVarError env.EmptyVarError
 	if errors.As(err, &emptyEnvVarError) {
 		logger.Error("Environment variable should not be empty", zap.String("key", emptyEnvVarError.Key))
 		return
