@@ -12,7 +12,7 @@ require (
 	github.com/go-logr/zapr v1.3.0
 	github.com/onsi/ginkgo/v2 v2.23.0
 	github.com/onsi/gomega v1.36.2
-	github.com/thessem/zap-prettyconsole v0.5.2
+	github.com/thessem/zap-prettyconsole v0.6.0
 	go.opentelemetry.io/contrib/bridges/otelzap v0.12.0
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.62.0
 	go.opentelemetry.io/contrib/propagators/autoprop v0.62.0
@@ -28,7 +28,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.37.0
 	go.uber.org/automaxprocs v1.6.0
 	go.uber.org/fx v1.24.0
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.27.1
 	go.uber.org/zap/exp v0.3.0
 )
 
