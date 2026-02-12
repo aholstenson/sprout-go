@@ -13,6 +13,9 @@ import (
 )
 
 type Config struct {
+	// Enabled controls if the health server should be started.
+	// When not explicitly set, defaults to true in production and false in development.
+	Enabled *bool `env:"ENABLED"`
 	// Port is the port to bind to
 	Port int `env:"PORT" envDefault:"8088"`
 }
@@ -28,20 +31,40 @@ type Server struct {
 	readinessChecks []Check
 }
 
-func NewServer(lifecycle fx.Lifecycle, logger *zap.Logger, config Config) Checks {
+type ServiceInfo struct {
+	fx.In
+
+	Development bool `name:"env:development"`
+}
+
+func NewServer(lifecycle fx.Lifecycle, logger *zap.Logger, serviceInfo ServiceInfo, config Config) Checks {
 	s := &Server{
 		logger:   logger,
 		httpPort: config.Port,
 	}
 
-	lifecycle.Append(fx.Hook{
-		OnStart: func(ctx context.Context) error {
-			return s.Start()
-		},
-		OnStop: func(ctx context.Context) error {
-			return s.Stop(ctx)
-		},
-	})
+	// Determine if health server should be enabled
+	enabled := false
+	if config.Enabled != nil {
+		// User explicitly set the enabled flag
+		enabled = *config.Enabled
+	} else {
+		// Default: enabled in production, disabled in development
+		enabled = !serviceInfo.Development
+	}
+
+	if enabled {
+		lifecycle.Append(fx.Hook{
+			OnStart: func(ctx context.Context) error {
+				return s.Start()
+			},
+			OnStop: func(ctx context.Context) error {
+				return s.Stop(ctx)
+			},
+		})
+	} else {
+		logger.Info("Health server is disabled")
+	}
 	return s
 }
 

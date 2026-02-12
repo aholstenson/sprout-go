@@ -19,6 +19,7 @@ var _ = Describe("Health", func() {
 		app := fxtest.New(
 			GinkgoT(),
 			logging.Module(zaptest.NewLogger(GinkgoT())),
+			fx.Supply(fx.Annotate(false, fx.ResultTags(`name:"env:development"`))),
 			health.Module,
 			fx.Invoke(func(checks health.Checks) {
 				// Do nothing, only here to make server always start
@@ -43,6 +44,7 @@ var _ = Describe("Health", func() {
 		app := fxtest.New(
 			t,
 			logging.Module(zaptest.NewLogger(GinkgoT())),
+			fx.Supply(fx.Annotate(false, fx.ResultTags(`name:"env:development"`))),
 			health.Module,
 			fx.Invoke(func(checks health.Checks) {
 				// Do nothing, only here to make server always start
@@ -66,6 +68,7 @@ var _ = Describe("Health", func() {
 		app := fxtest.New(
 			GinkgoT(),
 			logging.Module(zaptest.NewLogger(GinkgoT())),
+			fx.Supply(fx.Annotate(false, fx.ResultTags(`name:"env:development"`))),
 			health.Module,
 			fx.Invoke(func(checks health.Checks) {
 				checks.AddLivenessCheck(health.Check{
@@ -93,6 +96,7 @@ var _ = Describe("Health", func() {
 		app := fxtest.New(
 			GinkgoT(),
 			logging.Module(zaptest.NewLogger(GinkgoT())),
+			fx.Supply(fx.Annotate(false, fx.ResultTags(`name:"env:development"`))),
 			health.Module,
 			fx.Invoke(func(checks health.Checks) {
 				checks.AddReadinessCheck(health.Check{
