@@ -167,4 +167,61 @@ var _ = Describe("Health", func() {
 		// Every check that was added must have run exactly once.
 		Expect(ran.Load()).To(Equal(int64(goroutines * perGoroutine)))
 	})
+
+	It("runs checks that are added after the server has started", func() {
+		var ran atomic.Int64
+		var checks health.Checks
+
+		app := fxtest.New(
+			GinkgoT(),
+			logging.Module(zaptest.NewLogger(GinkgoT())),
+			fx.Supply(fx.Annotate(false, fx.ResultTags(`name:"env:development"`))),
+			health.Module,
+			fx.Populate(&checks),
+		)
+		app.RequireStart()
+		defer app.RequireStop()
+
+		checks.AddLivenessCheck(health.Check{
+			Name: "added-after-start",
+			Check: func(ctx context.Context) error {
+				ran.Add(1)
+				return nil
+			},
+		})
+
+		res, err := http.Get("http://localhost:8088/healthz")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(res.StatusCode).To(Equal(http.StatusOK))
+		Expect(ran.Load()).To(Equal(int64(1)))
+	})
+
+	It("reports a failing check that is added after the server has started", func() {
+		var checks health.Checks
+
+		app := fxtest.New(
+			GinkgoT(),
+			logging.Module(zaptest.NewLogger(GinkgoT())),
+			fx.Supply(fx.Annotate(false, fx.ResultTags(`name:"env:development"`))),
+			health.Module,
+			fx.Populate(&checks),
+		)
+		app.RequireStart()
+		defer app.RequireStop()
+
+		res, err := http.Get("http://localhost:8088/readyz")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(res.StatusCode).To(Equal(http.StatusOK))
+
+		checks.AddReadinessCheck(health.Check{
+			Name: "added-after-start",
+			Check: func(ctx context.Context) error {
+				return errors.New("failed")
+			},
+		})
+
+		res, err = http.Get("http://localhost:8088/readyz")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(res.StatusCode).To(Equal(http.StatusServiceUnavailable))
+	})
 })

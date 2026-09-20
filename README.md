@@ -262,9 +262,10 @@ var Module = fx.Module(
 )
 ```
 
-Checks can not be added after the application has started. It is recommended to
-add checks either using `fx.Invoke` for simple cases or in a provide function
-of a service.
+Checks may be added at any time, including while the application runs. It is
+recommended to add checks either using `fx.Invoke` for simple cases or in a
+provide function of a service, so that they are in place before the first
+request arrives.
 
 Example with a fictional `RemoteService`:
 

@@ -2,13 +2,12 @@ package health
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/http"
 	"strconv"
-	"sync"
 	"time"
 
-	"github.com/alexliesenfeld/health"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -24,14 +23,11 @@ type Config struct {
 type Server struct {
 	logger *zap.Logger
 
-	httpListener net.Listener
-	httpServer   *http.Server
-	httpPort     int
+	httpServer *http.Server
+	httpPort   int
 
-	// mu guards the checks, which may be added from any goroutine.
-	mu              sync.Mutex
-	livenessChecks  []Check
-	readinessChecks []Check
+	liveness  *checkSet
+	readiness *checkSet
 }
 
 type ServiceInfo struct {
@@ -44,6 +40,9 @@ func NewServer(lifecycle fx.Lifecycle, logger *zap.Logger, serviceInfo ServiceIn
 	s := &Server{
 		logger:   logger,
 		httpPort: config.Port,
+
+		liveness:  newCheckSet(logger.With(zap.String("type", "liveness"))),
+		readiness: newCheckSet(logger.With(zap.String("type", "readiness"))),
 	}
 
 	// Determine if health server should be enabled
@@ -58,12 +57,8 @@ func NewServer(lifecycle fx.Lifecycle, logger *zap.Logger, serviceInfo ServiceIn
 
 	if enabled {
 		lifecycle.Append(fx.Hook{
-			OnStart: func(ctx context.Context) error {
-				return s.Start(ctx)
-			},
-			OnStop: func(ctx context.Context) error {
-				return s.Stop(ctx)
-			},
+			OnStart: s.Start,
+			OnStop:  s.Stop,
 		})
 	} else {
 		logger.Info("Health server is disabled")
@@ -72,25 +67,19 @@ func NewServer(lifecycle fx.Lifecycle, logger *zap.Logger, serviceInfo ServiceIn
 }
 
 func (s *Server) AddLivenessCheck(check Check) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.livenessChecks = append(s.livenessChecks, check)
+	s.liveness.add(check)
 }
 
 func (s *Server) AddReadinessCheck(check Check) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.readinessChecks = append(s.readinessChecks, check)
+	s.readiness.add(check)
 }
 
 func (s *Server) Start(ctx context.Context) error {
 	s.logger.Info("Starting health server", zap.Int("port", s.httpPort))
 
 	mux := &http.ServeMux{}
-	mux.HandleFunc("/healthz", s.newHandler("liveness", &s.livenessChecks))
-	mux.HandleFunc("/readyz", s.newHandler("readiness", &s.readinessChecks))
+	mux.Handle("/healthz", s.liveness)
+	mux.Handle("/readyz", s.readiness)
 
 	listenConfig := &net.ListenConfig{}
 	ln, err := listenConfig.Listen(ctx, "tcp", ":"+strconv.Itoa(s.httpPort))
@@ -98,7 +87,8 @@ func (s *Server) Start(ctx context.Context) error {
 		return err
 	}
 
-	s.httpListener = ln
+	s.liveness.start()
+	s.readiness.start()
 
 	s.httpServer = &http.Server{
 		Handler:      mux,
@@ -109,7 +99,7 @@ func (s *Server) Start(ctx context.Context) error {
 
 	go func() {
 		err2 := s.httpServer.Serve(ln)
-		if err2 != nil && err2 != http.ErrServerClosed {
+		if err2 != nil && !errors.Is(err2, http.ErrServerClosed) {
 			s.logger.Error("Error starting health server", zap.Error(err2))
 		}
 	}()
@@ -120,57 +110,11 @@ func (s *Server) Stop(ctx context.Context) error {
 	s.logger.Info("Stopping health server")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	return s.httpServer.Shutdown(ctx)
-}
 
-// newHandler creates the handler of an endpoint from the checks that have been
-// added to it.
-func (s *Server) newHandler(name string, checks *[]Check) http.HandlerFunc {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	err := s.httpServer.Shutdown(ctx)
 
-	return health.NewHandler(newChecker(
-		s.logger.With(zap.String("type", name)),
-		*checks,
-	))
-}
+	s.liveness.stop()
+	s.readiness.stop()
 
-func newChecker(logger *zap.Logger, checks []Check) health.Checker {
-	options := []health.CheckerOption{
-		health.WithTimeout(5 * time.Second),
-		health.WithStatusListener(func(ctx context.Context, state health.CheckerState) {
-			switch state.Status {
-			case health.StatusDown:
-				logger.Info("Health status changed", zap.String("state", "down"))
-			case health.StatusUp:
-				logger.Info("Health status changed", zap.String("state", "up"))
-			case health.StatusUnknown:
-				// Unknown should not be logged
-			}
-		}),
-		health.WithInterceptors(func(next health.InterceptorFunc) health.InterceptorFunc {
-			return func(ctx context.Context, name string, state health.CheckState) health.CheckState {
-				currentStatus := state.Status
-				result := next(ctx, name, state)
-
-				if currentStatus != result.Status {
-					switch result.Status {
-					case health.StatusUp:
-						logger.Info("Health check marked as healthy", zap.String("name", name))
-					case health.StatusDown:
-						logger.Info("Health check marked as unhealthy", zap.String("name", name))
-					case health.StatusUnknown:
-						// Unknown should not be logged
-					}
-				}
-				return result
-			}
-		}),
-	}
-
-	for _, check := range checks {
-		options = append(options, health.WithCheck(check))
-	}
-
-	return health.NewChecker(options...)
+	return err
 }
