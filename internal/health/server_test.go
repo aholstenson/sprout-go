@@ -3,7 +3,10 @@ package health_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
+	"sync"
+	"sync/atomic"
 
 	"github.com/aholstenson/sprout-go/internal/health"
 	"github.com/aholstenson/sprout-go/internal/logging"
@@ -118,5 +121,50 @@ var _ = Describe("Health", func() {
 		res, err = http.Get("http://localhost:8088/readyz")
 		Expect(err).ToNot(HaveOccurred())
 		Expect(res.StatusCode).To(Equal(http.StatusServiceUnavailable))
+	})
+
+	It("keeps every check added from several goroutines", func() {
+		const goroutines = 8
+		const perGoroutine = 16
+
+		var ran atomic.Int64
+		var checks health.Checks
+
+		app := fxtest.New(
+			GinkgoT(),
+			logging.Module(zaptest.NewLogger(GinkgoT())),
+			fx.Supply(fx.Annotate(false, fx.ResultTags(`name:"env:development"`))),
+			health.Module,
+			fx.Populate(&checks),
+		)
+
+		var wg sync.WaitGroup
+		for i := range goroutines {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+
+				for j := range perGoroutine {
+					checks.AddLivenessCheck(health.Check{
+						Name: fmt.Sprintf("check-%d-%d", i, j),
+						Check: func(ctx context.Context) error {
+							ran.Add(1)
+							return nil
+						},
+					})
+				}
+			}()
+		}
+		wg.Wait()
+
+		app.RequireStart()
+		defer app.RequireStop()
+
+		res, err := http.Get("http://localhost:8088/healthz")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(res.StatusCode).To(Equal(http.StatusOK))
+
+		// Every check that was added must have run exactly once.
+		Expect(ran.Load()).To(Equal(int64(goroutines * perGoroutine)))
 	})
 })

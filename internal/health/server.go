@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/alexliesenfeld/health"
@@ -27,6 +28,8 @@ type Server struct {
 	httpServer   *http.Server
 	httpPort     int
 
+	// mu guards the checks, which may be added from any goroutine.
+	mu              sync.Mutex
 	livenessChecks  []Check
 	readinessChecks []Check
 }
@@ -69,10 +72,16 @@ func NewServer(lifecycle fx.Lifecycle, logger *zap.Logger, serviceInfo ServiceIn
 }
 
 func (s *Server) AddLivenessCheck(check Check) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.livenessChecks = append(s.livenessChecks, check)
 }
 
 func (s *Server) AddReadinessCheck(check Check) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.readinessChecks = append(s.readinessChecks, check)
 }
 
@@ -80,20 +89,8 @@ func (s *Server) Start(ctx context.Context) error {
 	s.logger.Info("Starting health server", zap.Int("port", s.httpPort))
 
 	mux := &http.ServeMux{}
-	mux.HandleFunc(
-		"/healthz",
-		health.NewHandler(newChecker(
-			s.logger.With(zap.String("type", "liveness")),
-			s.livenessChecks,
-		)),
-	)
-	mux.HandleFunc(
-		"/readyz",
-		health.NewHandler(newChecker(
-			s.logger.With(zap.String("type", "readiness")),
-			s.readinessChecks,
-		)),
-	)
+	mux.HandleFunc("/healthz", s.newHandler("liveness", &s.livenessChecks))
+	mux.HandleFunc("/readyz", s.newHandler("readiness", &s.readinessChecks))
 
 	listenConfig := &net.ListenConfig{}
 	ln, err := listenConfig.Listen(ctx, "tcp", ":"+strconv.Itoa(s.httpPort))
@@ -124,6 +121,18 @@ func (s *Server) Stop(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	return s.httpServer.Shutdown(ctx)
+}
+
+// newHandler creates the handler of an endpoint from the checks that have been
+// added to it.
+func (s *Server) newHandler(name string, checks *[]Check) http.HandlerFunc {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return health.NewHandler(newChecker(
+		s.logger.With(zap.String("type", name)),
+		*checks,
+	))
 }
 
 func newChecker(logger *zap.Logger, checks []Check) health.Checker {
