@@ -14,7 +14,8 @@ import (
 
 type Config struct {
 	// Enabled controls if the health server should be started.
-	// When not explicitly set, defaults to true in production and false in development.
+	// When not explicitly set, defaults to true in production and false in
+	// development and in tests.
 	Enabled *bool `env:"ENABLED"`
 	// Port is the port to bind to
 	Port int `env:"PORT" envDefault:"8088"`
@@ -34,6 +35,7 @@ type ServiceInfo struct {
 	fx.In
 
 	Development bool `name:"env:development"`
+	Testing     bool `name:"env:testing"`
 }
 
 func NewServer(lifecycle fx.Lifecycle, logger *zap.Logger, serviceInfo ServiceInfo, config Config) Checks {
@@ -51,8 +53,9 @@ func NewServer(lifecycle fx.Lifecycle, logger *zap.Logger, serviceInfo ServiceIn
 		// User explicitly set the enabled flag
 		enabled = *config.Enabled
 	} else {
-		// Default: enabled in production, disabled in development
-		enabled = !serviceInfo.Development
+		// Default: enabled in production. In development and in tests a port
+		// would be bound that the developer did not ask for.
+		enabled = !serviceInfo.Development && !serviceInfo.Testing
 	}
 
 	if enabled {

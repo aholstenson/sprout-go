@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -17,12 +18,21 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
+// environment supplies the flags that the health server uses to decide whether
+// it should run.
+func environment(development bool, testing bool) fx.Option {
+	return fx.Options(
+		fx.Supply(fx.Annotate(development, fx.ResultTags(`name:"env:development"`))),
+		fx.Supply(fx.Annotate(testing, fx.ResultTags(`name:"env:testing"`))),
+	)
+}
+
 var _ = Describe("Health", func() {
 	It("server can be started", func() {
 		app := fxtest.New(
 			GinkgoT(),
 			logging.Module(zaptest.NewLogger(GinkgoT())),
-			fx.Supply(fx.Annotate(false, fx.ResultTags(`name:"env:development"`))),
+			environment(false, false),
 			health.Module,
 			fx.Invoke(func(checks health.Checks) {
 				// Do nothing, only here to make server always start
@@ -47,7 +57,7 @@ var _ = Describe("Health", func() {
 		app := fxtest.New(
 			t,
 			logging.Module(zaptest.NewLogger(GinkgoT())),
-			fx.Supply(fx.Annotate(false, fx.ResultTags(`name:"env:development"`))),
+			environment(false, false),
 			health.Module,
 			fx.Invoke(func(checks health.Checks) {
 				// Do nothing, only here to make server always start
@@ -71,7 +81,7 @@ var _ = Describe("Health", func() {
 		app := fxtest.New(
 			GinkgoT(),
 			logging.Module(zaptest.NewLogger(GinkgoT())),
-			fx.Supply(fx.Annotate(false, fx.ResultTags(`name:"env:development"`))),
+			environment(false, false),
 			health.Module,
 			fx.Invoke(func(checks health.Checks) {
 				checks.AddLivenessCheck(health.Check{
@@ -99,7 +109,7 @@ var _ = Describe("Health", func() {
 		app := fxtest.New(
 			GinkgoT(),
 			logging.Module(zaptest.NewLogger(GinkgoT())),
-			fx.Supply(fx.Annotate(false, fx.ResultTags(`name:"env:development"`))),
+			environment(false, false),
 			health.Module,
 			fx.Invoke(func(checks health.Checks) {
 				checks.AddReadinessCheck(health.Check{
@@ -133,7 +143,7 @@ var _ = Describe("Health", func() {
 		app := fxtest.New(
 			GinkgoT(),
 			logging.Module(zaptest.NewLogger(GinkgoT())),
-			fx.Supply(fx.Annotate(false, fx.ResultTags(`name:"env:development"`))),
+			environment(false, false),
 			health.Module,
 			fx.Populate(&checks),
 		)
@@ -175,7 +185,7 @@ var _ = Describe("Health", func() {
 		app := fxtest.New(
 			GinkgoT(),
 			logging.Module(zaptest.NewLogger(GinkgoT())),
-			fx.Supply(fx.Annotate(false, fx.ResultTags(`name:"env:development"`))),
+			environment(false, false),
 			health.Module,
 			fx.Populate(&checks),
 		)
@@ -202,7 +212,7 @@ var _ = Describe("Health", func() {
 		app := fxtest.New(
 			GinkgoT(),
 			logging.Module(zaptest.NewLogger(GinkgoT())),
-			fx.Supply(fx.Annotate(false, fx.ResultTags(`name:"env:development"`))),
+			environment(false, false),
 			health.Module,
 			fx.Populate(&checks),
 		)
@@ -223,5 +233,45 @@ var _ = Describe("Health", func() {
 		res, err = http.Get("http://localhost:8088/readyz")
 		Expect(err).ToNot(HaveOccurred())
 		Expect(res.StatusCode).To(Equal(http.StatusServiceUnavailable))
+	})
+
+	It("does not bind a port while testing", func() {
+		var checks health.Checks
+
+		app := fxtest.New(
+			GinkgoT(),
+			logging.Module(zaptest.NewLogger(GinkgoT())),
+			environment(false, true),
+			health.Module,
+			fx.Populate(&checks),
+		)
+		app.RequireStart()
+		defer app.RequireStop()
+
+		// Nothing listens, so the port is free to bind.
+		listener, err := net.Listen("tcp", ":8088")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(listener.Close()).To(Succeed())
+	})
+
+	It("can be enabled while testing", func() {
+		t := GinkgoT()
+		t.Setenv("HEALTH_SERVER_ENABLED", "true")
+
+		app := fxtest.New(
+			t,
+			logging.Module(zaptest.NewLogger(t)),
+			environment(false, true),
+			health.Module,
+			fx.Invoke(func(checks health.Checks) {
+				// Do nothing, only here to make server always start
+			}),
+		)
+		app.RequireStart()
+		defer app.RequireStop()
+
+		res, err := http.Get("http://localhost:8088/healthz")
+		Expect(err).ToNot(HaveOccurred())
+		Expect(res.StatusCode).To(Equal(http.StatusOK))
 	})
 })

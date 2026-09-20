@@ -240,6 +240,15 @@ code if all checks pass, or a `503` status code if any check fails. The port
 that the server listens on can be configured via the `HEALTH_SERVER_PORT`
 environment variable.
 
+The server runs in production, but not in development mode or in tests, where
+it would bind a port that you did not ask for. Set `HEALTH_SERVER_ENABLED` to
+`true` or `false` to decide for yourself.
+
+| Variable | Description | Default |
+| -------- | ----------- | ------- |
+| `HEALTH_SERVER_ENABLED` | Whether to start the health server | On outside of development and tests |
+| `HEALTH_SERVER_PORT` | The port that the health server listens on | `8088` |
+
 Health checks are implemented using [Health](https://github.com/alexliesenfeld/health)
 with checks being defined via `sprout.HealthCheck` structs. Checks can then
 be added by calling `AddLivenessCheck` or `AddReadinessCheck` on the
