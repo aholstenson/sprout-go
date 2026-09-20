@@ -154,8 +154,9 @@ func (e *loggingTraceExporter) ExportSpans(ctx context.Context, spans []sdktrace
 			fields = append(fields, zap.Any(string(attr.Key), value))
 		}
 
-		// Log as debug value
-		e.logger.Debug(span.Name(), fields...)
+		// This exporter only exists when trace logging was asked for, so the
+		// spans are logged at info and need no further opt-in.
+		e.logger.Info(span.Name(), fields...)
 	}
 
 	return nil
