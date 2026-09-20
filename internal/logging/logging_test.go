@@ -2,6 +2,7 @@ package logging_test
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/aholstenson/sprout-go/internal/logging"
 	"github.com/go-logr/logr"
@@ -98,7 +99,7 @@ var _ = Describe("Logging", func() {
 				t := GinkgoT()
 				t.Setenv("LOG_LEVEL", "debug")
 
-				core, logs := observer.New(zapcore.InfoLevel)
+				core, logs := observer.New(zapcore.DebugLevel)
 				rootLogger := zap.New(core)
 
 				// Root logger (empty name array)
@@ -130,7 +131,7 @@ var _ = Describe("Logging", func() {
 				t.Setenv("LOG_LEVEL", "error")
 				t.Setenv("LOG_LEVEL_SERVICE", "debug")
 
-				core, logs := observer.New(zapcore.InfoLevel)
+				core, logs := observer.New(zapcore.DebugLevel)
 				rootLogger := zap.New(core)
 
 				// Root logger should use error level
@@ -165,7 +166,7 @@ var _ = Describe("Logging", func() {
 			})
 
 			It("should use INFO level when no environment variable is set", func() {
-				core, logs := observer.New(zapcore.InfoLevel)
+				core, logs := observer.New(zapcore.DebugLevel)
 				rootLogger := zap.New(core)
 
 				logger := logging.CreateLogger(rootLogger, []string{"test"})
@@ -182,7 +183,7 @@ var _ = Describe("Logging", func() {
 				t := GinkgoT()
 				t.Setenv("LOG_LEVEL_TEST", "debug")
 
-				core, logs := observer.New(zapcore.InfoLevel)
+				core, logs := observer.New(zapcore.DebugLevel)
 				rootLogger := zap.New(core)
 
 				logger := logging.CreateLogger(rootLogger, []string{"test"})
@@ -212,7 +213,7 @@ var _ = Describe("Logging", func() {
 				t := GinkgoT()
 				t.Setenv("LOG_LEVEL_TEST", "error")
 
-				core, logs := observer.New(zapcore.InfoLevel)
+				core, logs := observer.New(zapcore.DebugLevel)
 				rootLogger := zap.New(core)
 
 				logger := logging.CreateLogger(rootLogger, []string{"test"})
@@ -239,7 +240,7 @@ var _ = Describe("Logging", func() {
 				t.Setenv("LOG_LEVEL_TEST", "error")
 				t.Setenv("LOG_LEVEL_TEST_COMPONENT", "debug")
 
-				core, logs := observer.New(zapcore.InfoLevel)
+				core, logs := observer.New(zapcore.DebugLevel)
 				rootLogger := zap.New(core)
 
 				// Logger with more specific name should use debug level
@@ -274,7 +275,7 @@ var _ = Describe("Logging", func() {
 				t.Setenv("LOG_LEVEL_DATABASE", "warn")
 				t.Setenv("LOG_LEVEL_DATABASE_CONNECTION", "debug")
 
-				core, logs := observer.New(zapcore.InfoLevel)
+				core, logs := observer.New(zapcore.DebugLevel)
 				rootLogger := zap.New(core)
 
 				dbLogger := logging.CreateLogger(rootLogger, []string{"database"})
@@ -310,7 +311,7 @@ var _ = Describe("Logging", func() {
 				t := GinkgoT()
 				t.Setenv("LOG_LEVEL_COM_EXAMPLE_SERVICE", "debug")
 
-				core, logs := observer.New(zapcore.InfoLevel)
+				core, logs := observer.New(zapcore.DebugLevel)
 				rootLogger := zap.New(core)
 
 				logger := logging.CreateLogger(rootLogger, []string{"com.example", "service"})
@@ -333,7 +334,7 @@ var _ = Describe("Logging", func() {
 				t := GinkgoT()
 				t.Setenv("LOG_LEVEL_SUGAR", "debug")
 
-				core, logs := observer.New(zapcore.InfoLevel)
+				core, logs := observer.New(zapcore.DebugLevel)
 				rootLogger := zap.New(core)
 
 				var logger *zap.SugaredLogger
@@ -367,7 +368,7 @@ var _ = Describe("Logging", func() {
 				t := GinkgoT()
 				t.Setenv("LOG_LEVEL_LOGR", "debug")
 
-				core, logs := observer.New(zapcore.InfoLevel)
+				core, logs := observer.New(zapcore.DebugLevel)
 				rootLogger := zap.New(core)
 
 				var logger logr.Logger
@@ -394,7 +395,7 @@ var _ = Describe("Logging", func() {
 				t := GinkgoT()
 				t.Setenv("LOG_LEVEL_PARENT", "debug")
 
-				core, logs := observer.New(zapcore.InfoLevel)
+				core, logs := observer.New(zapcore.DebugLevel)
 				rootLogger := zap.New(core)
 
 				// Child logger should inherit parent's debug level
@@ -418,7 +419,7 @@ var _ = Describe("Logging", func() {
 				t.Setenv("LOG_LEVEL_SERVICE_API", "warn")
 				t.Setenv("LOG_LEVEL_SERVICE_API_V1", "debug")
 
-				core, logs := observer.New(zapcore.InfoLevel)
+				core, logs := observer.New(zapcore.DebugLevel)
 				rootLogger := zap.New(core)
 
 				logger := logging.CreateLogger(rootLogger, []string{"service", "api", "v1", "endpoint"})
@@ -434,6 +435,40 @@ var _ = Describe("Logging", func() {
 				}
 				Expect(debugFound).To(BeTrue())
 			})
+		})
+	})
+
+	Describe("Wrapped Outputs", func() {
+		It("should keep sampling a logger that raised its level", func() {
+			t := GinkgoT()
+			t.Setenv("LOG_LEVEL_SAMPLED", "debug")
+
+			core, logs := observer.New(zapcore.DebugLevel)
+			rootLogger := zap.New(zapcore.NewSamplerWithOptions(core, time.Minute, 1, 0))
+
+			logger := logging.CreateLogger(rootLogger, []string{"sampled"})
+
+			for range 5 {
+				logger.Debug("repeated debug message")
+			}
+
+			Expect(logs.FilterMessage("repeated debug message").Len()).To(Equal(1))
+		})
+
+		It("should not write to an output that is less verbose than the logger", func() {
+			t := GinkgoT()
+			t.Setenv("LOG_LEVEL_TEE", "debug")
+
+			verbose, verboseLogs := observer.New(zapcore.DebugLevel)
+			limited, limitedLogs := observer.New(zapcore.WarnLevel)
+			rootLogger := zap.New(zapcore.NewTee(verbose, limited))
+
+			logger := logging.CreateLogger(rootLogger, []string{"tee"})
+
+			logger.Debug("debug message")
+
+			Expect(verboseLogs.FilterMessage("debug message").Len()).To(Equal(1))
+			Expect(limitedLogs.FilterMessage("debug message").Len()).To(Equal(0))
 		})
 	})
 })

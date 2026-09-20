@@ -58,9 +58,9 @@ func CreateRootLogger(serviceInfo internal.ServiceInfo) (*zap.Logger, error) {
 		return nil, err
 	} else if ok {
 		otelCore := otelzap.NewCore("global", otelzap.WithLoggerProvider(provider))
-		// Wrap the otelzap core to limit the log level to info by default,
-		// avoids debug logs from being exported by default
-		cores = append(cores, &levelChangingCore{core: otelCore, level: zap.InfoLevel})
+		// Limit the otelzap core to info, so that debug logs are not exported
+		// even when a logger below is more verbose.
+		cores = append(cores, withLevel(otelCore, zap.InfoLevel))
 	}
 
 	core := zapcore.NewTee(cores...)
@@ -75,6 +75,10 @@ func CreateRootLogger(serviceInfo internal.ServiceInfo) (*zap.Logger, error) {
 		)
 	}
 
+	// The cores above accept every level. This decides what the root logger
+	// emits, and CreateLogger replaces it for each named logger.
+	core = withLevel(core, determineLevel(nil))
+
 	logger := zap.New(core, opts...)
 	return logger, nil
 }
@@ -82,13 +86,13 @@ func CreateRootLogger(serviceInfo internal.ServiceInfo) (*zap.Logger, error) {
 func createDevelopmentCore() zapcore.Core {
 	config := prettyconsole.NewEncoderConfig()
 	encoder := prettyconsole.NewEncoder(config)
-	return zapcore.NewCore(encoder, os.Stderr, zap.InfoLevel)
+	return zapcore.NewCore(encoder, os.Stderr, zap.DebugLevel)
 }
 
 func createProductionCore() zapcore.Core {
 	config := zap.NewProductionEncoderConfig()
 	encoder := zapcore.NewJSONEncoder(config)
-	return zapcore.NewCore(encoder, os.Stderr, zap.InfoLevel)
+	return zapcore.NewCore(encoder, os.Stderr, zap.DebugLevel)
 }
 
 func createFileCore(logFile string) (zapcore.Core, error) {
@@ -99,5 +103,5 @@ func createFileCore(logFile string) (zapcore.Core, error) {
 
 	config := zap.NewProductionEncoderConfig()
 	encoder := zapcore.NewJSONEncoder(config)
-	return zapcore.NewCore(encoder, zapcore.AddSync(file), zap.InfoLevel), nil
+	return zapcore.NewCore(encoder, zapcore.AddSync(file), zap.DebugLevel), nil
 }

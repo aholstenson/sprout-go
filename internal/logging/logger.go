@@ -18,12 +18,11 @@ func CreateLogger(rootLogger *zap.Logger, name []string) *zap.Logger {
 	level := determineLevel(name)
 	if level != zapcore.InfoLevel {
 		rootLogger.Info("Setting log level", zap.String("logger_name", strings.Join(name, ".")), zap.String("logger_level", level.String()))
-		result = result.WithOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
-			return &levelChangingCore{core: core, level: level}
-		}))
 	}
 
-	return result
+	return result.WithOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
+		return withLevel(core, level)
+	}))
 }
 
 func Logger(name ...string) any {

@@ -48,9 +48,26 @@ func levelFromEnv(name []string) zapcore.Level {
 	return level
 }
 
+// levelChangingCore decides which levels reach the core it wraps. Entries that
+// pass the level check are handed to the wrapped core, so sampling and the
+// levels of individual outputs below still apply.
+//
+// The cores that write to an output accept every level. This core is what
+// applies a level, which lets a named logger be more or less verbose than the
+// root logger.
 type levelChangingCore struct {
 	core  zapcore.Core
 	level zapcore.Level
+}
+
+// withLevel applies level to core. A level applied earlier is replaced instead
+// of nested, so that a named logger can be more verbose than the root logger.
+func withLevel(core zapcore.Core, level zapcore.Level) zapcore.Core {
+	if applied, ok := core.(*levelChangingCore); ok {
+		core = applied.core
+	}
+
+	return &levelChangingCore{core: core, level: level}
 }
 
 func (c *levelChangingCore) Enabled(level zapcore.Level) bool {
@@ -62,11 +79,11 @@ func (c *levelChangingCore) With(fields []zapcore.Field) zapcore.Core {
 }
 
 func (c *levelChangingCore) Check(entry zapcore.Entry, checkedEntry *zapcore.CheckedEntry) *zapcore.CheckedEntry {
-	if c.Enabled(entry.Level) {
-		return checkedEntry.AddCore(entry, c.core)
+	if !c.Enabled(entry.Level) {
+		return checkedEntry
 	}
 
-	return checkedEntry
+	return c.core.Check(entry, checkedEntry)
 }
 
 func (c *levelChangingCore) Write(entry zapcore.Entry, fields []zapcore.Field) error {
