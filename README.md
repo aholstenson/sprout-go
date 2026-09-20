@@ -11,7 +11,7 @@ checks.
 - 📝 Logging via [Zap](https://github.com/uber-go/zap) and [logr](https://github.com/go-logr/logr)
 - 🔍 Tracing and metrics via [OpenTelemetry](https://opentelemetry.io/)
 - 🩺 Liveness and readiness checks via [Health](https://github.com/alexliesenfeld/health)
-- 📤 OTLP exporting of traces and metrics
+- 📤 OTLP exporting of traces, metrics and logs
 
 ## Usage
 
@@ -38,8 +38,11 @@ The module can then be defined like this:
 ```go
 package example
 
-import "github.com/aholstenson/sprout-go"
-import "go.uber.org/fx"
+import (
+  "github.com/aholstenson/sprout-go"
+  "go.uber.org/fx"
+  "go.uber.org/zap"
+)
 
 type Config struct {
   Name string `env:"NAME" envDefault:"Test"`
@@ -49,8 +52,8 @@ var Module = fx.Module(
   "example",
   fx.Provide(sprout.Config("", &Config{}), fx.Private),
   fx.Provide(sprout.Logger("example"), fx.Private),
-  fx.Invoke(func(cfg *Config, logger *logr.Logger) {
-    logger.Info("Hello", "name", cfg.Name)
+  fx.Invoke(func(cfg *Config, logger *zap.Logger) {
+    logger.Info("Hello", zap.String("name", cfg.Name))
   })
 )
 ```
@@ -58,9 +61,16 @@ var Module = fx.Module(
 ## Development mode
 
 Sprout will act differently if the environment variable `DEVELOPMENT` is set
-to `true`. This is intended for local development, and will enable things such
-as pretty printing logs and disable sending of traces and metrics to an OTLP
-backend.
+to `true`. This is intended for local development. It pretty prints logs to
+stderr and keeps the health server off.
+
+Development mode does not control OTLP exporting. Traces, metrics and logs are
+only exported when an endpoint is configured, in any mode. See
+[Observability](#observability).
+
+| Variable | Description | Default |
+| -------- | ----------- | ------- |
+| `DEVELOPMENT` | Set to `true` for development mode: pretty printed logs, and the health server stays off | unset |
 
 A quick way to enable development mode is to use the `DEVELOPMENT=true` prefix
 when running the application:
@@ -139,15 +149,49 @@ var Module = fx.Module(
 )
 ```
 
-Variants of `sprout.Logger` are also available to create a `*zap.SugaredLogger`
-or a `logr.Logger`.
+Variants of `sprout.Logger` are also available to create a `*zap.SugaredLogger`,
+a `logr.Logger`, or a `*slog.Logger` with `sprout.SlogLogger`. `logr.Logger` is
+a value type, not a pointer.
 
 Example:
   
 ```go
 fx.Provide(sprout.SugaredLogger("example"), fx.Private)
 fx.Provide(sprout.LogrLogger("example"), fx.Private)
+fx.Provide(sprout.SlogLogger("example"), fx.Private)
 ```
+
+### Logging configuration
+
+| Variable | Description | Default |
+| -------- | ----------- | ------- |
+| `LOG_CONSOLE_OUTPUT` | Write logs to stderr | `true` |
+| `LOG_FILE_OUTPUT` | Path of a file to append JSON logs to. Empty means no file | empty |
+| `LOG_SAMPLING_INITIAL` | Number of identical messages logged each second before sampling starts. `0` turns sampling off | `100` |
+| `LOG_SAMPLING_THEREAFTER` | After the initial count, log every n-th identical message in that second | `100` |
+
+Sampling counts identical messages at the same level within a one second
+window. It applies to every output.
+
+### Log levels
+
+| Variable | Description | Default |
+| -------- | ----------- | ------- |
+| `LOG_LEVEL` | Level of the root logger | `info` |
+| `LOG_LEVEL_<NAME>` | Level of one named logger | falls back to `LOG_LEVEL` |
+
+Accepted values: `debug`, `info`, `warn`, `error`, `dpanic`, `panic`, `fatal`.
+
+To build the variable name, take the parts of the logger name, join them with
+`_`, replace every `.` with `_`, and put the result in upper case after
+`LOG_LEVEL_`. A logger created with `sprout.Logger("database", "connection")`
+is therefore set with `LOG_LEVEL_DATABASE_CONNECTION`.
+
+The most specific variable wins. A logger named `service.api.v1.endpoint` looks
+at `LOG_LEVEL_SERVICE_API_V1_ENDPOINT`, then `LOG_LEVEL_SERVICE_API_V1`, then
+`LOG_LEVEL_SERVICE_API`, then `LOG_LEVEL_SERVICE`, and last `LOG_LEVEL`.
+
+Sprout itself uses these logger names: `config`, `health`, `otel` and `fx`.
 
 ## Observability
 
@@ -171,6 +215,7 @@ integration:
 | `OTEL_METRIC_EXPORT_INTERVAL` | The interval in seconds to export metrics | `60` |
 | `OTEL_METRIC_EXPORT_TIMEOUT` | The timeout in seconds for exporting metrics | `30` |
 | `OTEL_TRACING_LOG` | Enable logging mode for tracing | `false` |
+| `OTEL_TRACING_SAMPLE_RATE` | Part of the traces to sample, between 0 and 1. `0` or less turns tracing off. `1` or more samples everything. The decision follows the parent span when there is one | `1.0` |
 
 OTLP exporting is disabled by default. You can enable logging of traces which
 can be useful for development by setting the `OTEL_TRACING_LOG` environment 
@@ -281,7 +326,7 @@ Example with a fictional `RemoteService`:
 ```go
 var Module = fx.Module(
   "healthCheckWithProvide",
-  fx.Provide(func(lifecycle fx.Lifecycle, checks sprout.HealthChecks) *RemoteService {
+  fx.Provide(func(lifecycle fx.Lifecycle, checks sprout.Health) *RemoteService {
     service := &RemoteService{
       ...
     }
@@ -305,6 +350,16 @@ var Module = fx.Module(
   }),
 )
 ```
+
+## Fx logging
+
+Sprout hides the Fx events that are only noise during startup, such as every
+provided type, but always shows the events that carry an error. Set the
+variable below to see them all, which helps when a dependency fails to resolve.
+
+| Variable | Description | Default |
+| -------- | ----------- | ------- |
+| `FX_ENABLE_DETAILED_LOGGING` | Set to `true` to log every Fx event. Without it Sprout hides the noisy events but always shows errors | unset |
 
 ## Working with the code
 

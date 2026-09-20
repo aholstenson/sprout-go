@@ -22,7 +22,7 @@ func CreateLogger(name ...string) *zap.Logger {
 //
 //	var Module = fx.Module(
 //		"example",
-//		fx.Provide(sprout.Logger("name", "of", "logger"), fx.PRivate),
+//		fx.Provide(sprout.Logger("name", "of", "logger"), fx.Private),
 //		fx.Invoke(func(logger *zap.Logger) {
 //			// ...
 //		}),
