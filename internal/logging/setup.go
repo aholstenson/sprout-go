@@ -23,7 +23,7 @@ type logConfig struct {
 }
 
 // CreateRootLogger creates the root logger of the application.
-func CreateRootLogger(serviceInfo internal.ServiceInfo) (*zap.Logger, error) {
+func CreateRootLogger(serviceInfo internal.ServiceInfo) (*RootLogger, error) {
 	opts := []zap.Option{zap.AddCaller(), zap.AddStacktrace(zap.ErrorLevel)}
 	var cores []zapcore.Core
 
@@ -53,10 +53,10 @@ func CreateRootLogger(serviceInfo internal.ServiceInfo) (*zap.Logger, error) {
 	}
 
 	// Connect to OpenTelemetry
-	provider, ok, err := otel.InitLogging(serviceInfo)
+	provider, shutdown, err := otel.InitLogging(serviceInfo)
 	if err != nil {
 		return nil, err
-	} else if ok {
+	} else if shutdown != nil {
 		otelCore := otelzap.NewCore("global", otelzap.WithLoggerProvider(provider))
 		// Limit the otelzap core to info, so that debug logs are not exported
 		// even when a logger below is more verbose.
@@ -79,8 +79,7 @@ func CreateRootLogger(serviceInfo internal.ServiceInfo) (*zap.Logger, error) {
 	// emits, and CreateLogger replaces it for each named logger.
 	core = withLevel(core, determineLevel(nil))
 
-	logger := zap.New(core, opts...)
-	return logger, nil
+	return NewRootLogger(zap.New(core, opts...), shutdown), nil
 }
 
 func createDevelopmentCore() zapcore.Core {

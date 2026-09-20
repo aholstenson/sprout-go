@@ -15,7 +15,7 @@ import (
 )
 
 type Sprout struct {
-	logger *zap.Logger
+	rootLogger *logging.RootLogger
 
 	serviceInfo internal.ServiceInfo
 }
@@ -30,11 +30,13 @@ func New(name string, version string) *Sprout {
 		Testing:     false,
 	}
 
-	logger, err := logging.CreateRootLogger(serviceInfo)
+	rootLogger, err := logging.CreateRootLogger(serviceInfo)
 	if err != nil {
 		_, _ = os.Stderr.WriteString("Unable to bootstrap: " + err.Error() + "\n")
 		os.Exit(1)
 	}
+
+	logger := rootLogger.Logger()
 	zap.ReplaceGlobals(logger)
 
 	// Integrate with log/slog
@@ -45,14 +47,14 @@ func New(name string, version string) *Sprout {
 	logger.Info("Starting application", zap.String("name", name), zap.String("version", version))
 	runtime.Setup(logger)
 	return &Sprout{
-		logger:      logger,
+		rootLogger:  rootLogger,
 		serviceInfo: serviceInfo,
 	}
 }
 
 // With lets you specify Fx options to be used when creating the application.
 func (s *Sprout) With(options ...fx.Option) *fx.App {
-	logger := s.logger
+	logger := s.rootLogger.Logger()
 
 	allOptions := []fx.Option{
 		fx.WithLogger(func() fxevent.Logger {
@@ -60,7 +62,7 @@ func (s *Sprout) With(options ...fx.Option) *fx.App {
 			return logging.NewFxLogger(logger, fxLogLevel == "true")
 		}),
 		fx.Supply(s.serviceInfo),
-		logging.Module(logger),
+		s.rootLogger.Module(),
 		otelModule,
 		health.Module,
 	}

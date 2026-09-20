@@ -12,11 +12,15 @@ import (
 )
 
 // InitLogging initializes OpenTelemetry log exporting if configured.
+//
+// The returned function flushes the records that are still buffered and then
+// releases the exporter. It is nil when no exporter endpoint is configured,
+// in which case the returned provider discards all records.
 func InitLogging(
 	serviceInfo internal.ServiceInfo,
-) (log.LoggerProvider, bool, error) {
+) (log.LoggerProvider, func(ctx context.Context) error, error) {
 	if !hasExporterEndpoint(moduleLogging) {
-		return noop.NewLoggerProvider(), false, nil
+		return noop.NewLoggerProvider(), nil, nil
 	}
 
 	resource, err := CreateResource(ServiceInfo{
@@ -26,21 +30,21 @@ func InitLogging(
 		Testing:     serviceInfo.Testing,
 	})
 	if err != nil {
-		return nil, false, err
+		return nil, nil, err
 	}
 
-	processor, err := otlploggrpc.New(context.Background())
+	exporter, err := otlploggrpc.New(context.Background())
 	if err != nil {
-		return nil, false, err
+		return nil, nil, err
 	}
 
 	options := []sdklog.LoggerProviderOption{
 		sdklog.WithResource(resource),
-		sdklog.WithProcessor(sdklog.NewBatchProcessor(processor)),
+		sdklog.WithProcessor(sdklog.NewBatchProcessor(exporter)),
 	}
 
 	provider := sdklog.NewLoggerProvider(options...)
 	global.SetLoggerProvider(provider)
 
-	return provider, true, nil
+	return provider, provider.Shutdown, nil
 }

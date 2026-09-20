@@ -1,6 +1,8 @@
 package logging_test
 
 import (
+	"context"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -469,6 +471,60 @@ var _ = Describe("Logging", func() {
 
 			Expect(verboseLogs.FilterMessage("debug message").Len()).To(Equal(1))
 			Expect(limitedLogs.FilterMessage("debug message").Len()).To(Equal(0))
+		})
+	})
+
+	Describe("Root Logger", func() {
+		It("should release what the logger writes to when the application stops", func() {
+			released := false
+			root := logging.NewRootLogger(zaptest.NewLogger(GinkgoT()), func(ctx context.Context) error {
+				released = true
+				return nil
+			})
+
+			var logger *zap.Logger
+			app := fxtest.New(
+				GinkgoT(),
+				root.Module(),
+				fx.Provide(logging.Logger("test")),
+				fx.Populate(&logger),
+			)
+
+			app.RequireStart()
+			Expect(released).To(BeFalse())
+
+			app.RequireStop()
+			Expect(released).To(BeTrue())
+		})
+
+		It("should report a failure to release", func() {
+			root := logging.NewRootLogger(zaptest.NewLogger(GinkgoT()), func(ctx context.Context) error {
+				return errors.New("unable to release")
+			})
+
+			var logger *zap.Logger
+			app := fx.New(
+				root.Module(),
+				fx.Provide(logging.Logger("test")),
+				fx.Populate(&logger),
+			)
+
+			ctx := context.Background()
+			Expect(app.Start(ctx)).To(Succeed())
+			Expect(app.Stop(ctx)).To(MatchError(ContainSubstring("unable to release")))
+		})
+
+		It("should stop when there is nothing to release", func() {
+			var logger *zap.Logger
+			app := fxtest.New(
+				GinkgoT(),
+				logging.Module(zaptest.NewLogger(GinkgoT())),
+				fx.Provide(logging.Logger("test")),
+				fx.Populate(&logger),
+			)
+
+			app.RequireStart()
+			app.RequireStop()
 		})
 	})
 })
