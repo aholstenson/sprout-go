@@ -7,3 +7,7 @@ vendor/
 # Go workspace file
 go.work
 dist/
+
+# mise
+mise.local.toml
+.mise.local.toml

@@ -1,0 +1,33 @@
+# Development tooling for Sprout. Install everything with `mise install`, then
+# run `mise tasks` to see the available tasks.
+
+[tools]
+go = "1.24.1"
+ginkgo = "2.28.1"
+golangci-lint = "2.7.2"
+goreleaser = "1.17.2"
+pre-commit = "4"
+
+[tasks.tidy]
+description = "Tidy the Go module"
+run = "go mod tidy"
+
+[tasks.fmt]
+description = "Format the code"
+run = "golangci-lint fmt"
+
+[tasks.lint]
+description = "Run the linters"
+run = "golangci-lint run"
+
+[tasks.lint-fix]
+description = "Run the linters and apply the fixes that are available"
+run = "golangci-lint run --fix"
+
+[tasks.test]
+description = "Run the tests"
+run = "ginkgo run -r"
+
+[tasks.build]
+description = "Build a release snapshot"
+run = "goreleaser release --snapshot --clean"

@@ -34,14 +34,6 @@
 			"matchPackagePrefixes": [ "go.opentelemetry.io" ]
 		},
 		{
-			"groupName": "Ginkgo testing",
-			"matchPackageNames": [
-				"github.com/onsi/ginkgo/v2",
-				"github.com/onsi/gomega"
-			],
-			"semanticCommitType": "test"
-		},
-		{
 			"groupName": "pre-commit",
 			"matchManagers": [ "pre-commit" ],
 			"semanticCommitType": "build"
@@ -55,6 +47,20 @@
 			"groupName": "GitHub Actions",
 			"matchManagers": [ "github-actions" ],
 			"semanticCommitType": "build"
+		},
+		{
+			"groupName": "Development tools",
+			"matchManagers": [ "mise" ],
+			"semanticCommitType": "build"
+		},
+		{
+			"groupName": "Ginkgo testing",
+			"matchPackageNames": [
+				"github.com/onsi/ginkgo/v2",
+				"github.com/onsi/ginkgo/v2/ginkgo",
+				"github.com/onsi/gomega"
+			],
+			"semanticCommitType": "test"
 		}
 	]
 }

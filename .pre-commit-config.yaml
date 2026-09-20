@@ -4,11 +4,17 @@ repos:
   hooks:
   - id: commitlint
     stages: [commit-msg]
-- repo: https://github.com/golangci/golangci-lint
-  rev: v2.7.2
+- repo: local
   hooks:
   - id: golangci-lint
-- repo: https://github.com/dnephin/pre-commit-golang
-  rev: v0.5.1
-  hooks:
+    name: golangci-lint
+    entry: mise run lint-fix
+    language: system
+    types: [go]
+    pass_filenames: false
   - id: go-mod-tidy
+    name: go mod tidy
+    entry: mise run tidy
+    language: system
+    types: [go]
+    pass_filenames: false

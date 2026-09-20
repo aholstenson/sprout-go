@@ -363,10 +363,35 @@ variable below to see them all, which helps when a dependency fails to resolve.
 
 ## Working with the code
 
+### Tooling
+
+[mise](https://mise.jdx.dev/) manages the development tools and the versions
+they are pinned to. Install the tools with:
+
+```bash
+mise install
+```
+
+Common jobs are available as mise tasks, which run the tools at the pinned
+versions. List them with `mise tasks`:
+
+| Task | Description |
+| ---- | ----------- |
+| `mise run fmt` | Format the code |
+| `mise run lint` | Run the linters |
+| `mise run lint-fix` | Run the linters and apply the fixes that are available |
+| `mise run test` | Run the tests |
+| `mise run tidy` | Tidy the Go module |
+| `mise run build` | Build a release snapshot |
+
+The same tasks run in CI, so a task that passes locally runs the same commands
+with the same tool versions as the pipeline.
+
 ### Pre-commit hooks
 
 [pre-commit](https://pre-commit.com/) is used to run various checks on the
-code before it is committed. To install the hooks, run:
+code before it is committed. It is installed by `mise install`. To install the
+hooks, run:
 
 ```bash
 pre-commit install -t pre-commit -t pre-commit-msg
@@ -398,16 +423,23 @@ consistent code style across editors.
 run automatically as part of the pre-commit hooks. To run the linters manually:
 
 ```bash
-golangci-lint run
+mise run lint
 ```
 
 ### Running tests
 
-[Ginkgo](https://onsi.github.io/ginkgo/) is used for testing. Tests can be run
-via `go test` but the `ginkgo` CLI provides an improved experience:
+[Ginkgo](https://onsi.github.io/ginkgo/) is used for testing. The `ginkgo` CLI
+is installed by `mise install`. Run the tests with:
 
 ```bash
-ginkgo run ./...
+mise run test
+```
+
+This runs `ginkgo run -r`. The CLI can also be called directly for things like
+focusing on a single suite:
+
+```bash
+ginkgo run ./internal/health
 ```
 
 ## License
