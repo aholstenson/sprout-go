@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 
 	"github.com/aholstenson/sprout-go/internal/logging"
@@ -42,15 +43,20 @@ func Config[T any](prefix string, value T) any {
 			err = env.ParseWithOptions(&config, opts)
 		}
 
-		var aggregateError env.AggregateError
-		if errors.As(err, &aggregateError) {
-			for _, err := range aggregateError.Errors {
+		if err != nil {
+			// Report each problem on its own, so that a reader of the log sees
+			// which variable caused it.
+			var aggregateError env.AggregateError
+			if errors.As(err, &aggregateError) {
+				for _, err := range aggregateError.Errors {
+					logError(logger, err)
+				}
+			} else {
 				logError(logger, err)
 			}
 
-			return config, errors.New("failed to load configuration")
-		} else if err != nil {
-			return config, err
+			// Keep the cause, so that a caller can inspect it with errors.As.
+			return config, fmt.Errorf("failed to load configuration: %w", err)
 		}
 
 		return config, nil

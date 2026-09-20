@@ -1,8 +1,11 @@
 package config_test
 
 import (
+	"errors"
+
 	"github.com/aholstenson/sprout-go/internal/config"
 	"github.com/aholstenson/sprout-go/internal/logging"
+	"github.com/caarlos0/env/v11"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/fx"
@@ -16,6 +19,14 @@ import (
 type Config struct {
 	Host string `env:"HOST" envDefault:"localhost"`
 	Port int    `env:"PORT" envDefault:"8080"`
+}
+
+type RequiredConfig struct {
+	Host string `env:"HOST,required"`
+}
+
+type NumberConfig struct {
+	Port int `env:"PORT"`
 }
 
 var _ = Describe("Config", func() {
@@ -90,5 +101,32 @@ var _ = Describe("Config", func() {
 
 		Expect(logs.FilterMessage("Read config value from environment").Len()).To(Equal(1))
 		Expect(logs.FilterMessage("Config value set to default").Len()).To(Equal(1))
+	})
+
+	It("keeps the cause when a required variable is not set", func() {
+		provider, ok := config.Config("TEST", RequiredConfig{}).(func(config.In) (RequiredConfig, error))
+		Expect(ok).To(BeTrue())
+
+		_, err := provider(config.In{})
+		Expect(err).To(HaveOccurred())
+
+		var notSet env.VarIsNotSetError
+		Expect(errors.As(err, &notSet)).To(BeTrue())
+		Expect(notSet.Key).To(Equal("TEST_HOST"))
+	})
+
+	It("keeps the cause when a value can not be parsed", func() {
+		t := GinkgoT()
+		t.Setenv("TEST_PORT", "not-a-number")
+
+		provider, ok := config.Config("TEST", NumberConfig{}).(func(config.In) (NumberConfig, error))
+		Expect(ok).To(BeTrue())
+
+		_, err := provider(config.In{})
+		Expect(err).To(HaveOccurred())
+
+		var parseError env.ParseError
+		Expect(errors.As(err, &parseError)).To(BeTrue())
+		Expect(parseError.Name).To(Equal("Port"))
 	})
 })
