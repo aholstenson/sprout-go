@@ -13,7 +13,9 @@ import (
 type In struct {
 	fx.In
 
-	Logger *zap.Logger `optional:"true"`
+	// RootLogger is the root logger of the application. It is optional, so
+	// that configuration can also be read without the logging module.
+	RootLogger *zap.Logger `name:"logging.zap" optional:"true"`
 }
 
 // Config will read configuration from the environment and provide the
@@ -26,11 +28,7 @@ func Config[T any](prefix string, value T) any {
 	return func(in In) (T, error) {
 		config := value
 
-		logger := in.Logger
-		if logger == nil {
-			// No logger provided, use the default logger
-			logger = logging.CreateLogger(zap.L(), []string{"config"})
-		}
+		logger := configLogger(in.RootLogger)
 
 		opts := env.Options{
 			Prefix: prefix,
@@ -57,6 +55,17 @@ func Config[T any](prefix string, value T) any {
 
 		return config, nil
 	}
+}
+
+// configLogger creates the logger that reports which values were read. It
+// falls back to the global logger when the application has no root logger,
+// which is the case when configuration is read on demand.
+func configLogger(rootLogger *zap.Logger) *zap.Logger {
+	if rootLogger == nil {
+		rootLogger = zap.L()
+	}
+
+	return logging.CreateLogger(rootLogger, []string{"config"})
 }
 
 func logFunc(logger *zap.Logger) func(tag string, value interface{}, isDefault bool) {
@@ -98,7 +107,7 @@ func BindConfig(prefix string, value any) error {
 		prefix += "_"
 	}
 
-	logger := logging.CreateLogger(zap.L(), []string{"config"})
+	logger := configLogger(nil)
 
 	err := env.ParseWithOptions(value, env.Options{
 		Prefix: prefix,

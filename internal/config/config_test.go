@@ -7,7 +7,10 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 type Config struct {
@@ -59,7 +62,6 @@ var _ = Describe("Config", func() {
 		app := fxtest.New(
 			t,
 			logging.Module(zaptest.NewLogger(GinkgoT())),
-			fx.Supply(zaptest.NewLogger(GinkgoT())),
 			fx.Provide(config.Config("TEST", &Config{})),
 			fx.Populate(&readConfig),
 		)
@@ -68,5 +70,25 @@ var _ = Describe("Config", func() {
 
 		Expect(readConfig.Host).To(Equal("test"))
 		Expect(readConfig.Port).To(Equal(1234))
+	})
+
+	It("reports the values it read to the application logger", func() {
+		t := GinkgoT()
+		t.Setenv("TEST_HOST", "test")
+
+		core, logs := observer.New(zapcore.InfoLevel)
+
+		var readConfig Config
+		app := fxtest.New(
+			t,
+			logging.Module(zap.New(core)),
+			fx.Provide(config.Config("TEST", Config{})),
+			fx.Populate(&readConfig),
+		)
+		app.RequireStart()
+		defer app.RequireStop()
+
+		Expect(logs.FilterMessage("Read config value from environment").Len()).To(Equal(1))
+		Expect(logs.FilterMessage("Config value set to default").Len()).To(Equal(1))
 	})
 })
