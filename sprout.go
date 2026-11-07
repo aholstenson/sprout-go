@@ -56,7 +56,8 @@ func New(name string, version string) *Sprout {
 func (s *Sprout) With(options ...fx.Option) *fx.App {
 	logger := s.rootLogger.Logger()
 
-	allOptions := []fx.Option{
+	allOptions := make([]fx.Option, 0, 6+len(options))
+	allOptions = append(allOptions,
 		fx.WithLogger(func() fxevent.Logger {
 			fxLogLevel := os.Getenv("FX_ENABLE_DETAILED_LOGGING")
 			return logging.NewFxLogger(logger, fxLogLevel == "true")
@@ -65,8 +66,7 @@ func (s *Sprout) With(options ...fx.Option) *fx.App {
 		s.rootLogger.Module(),
 		otelModule,
 		health.Module,
-	}
-
+	)
 	allOptions = append(allOptions, options...)
 	allOptions = append(allOptions, fx.Invoke(enableHealthServer))
 	return fx.New(allOptions...)

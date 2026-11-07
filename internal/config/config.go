@@ -37,7 +37,7 @@ func Config[T any](prefix string, value T) any {
 		}
 
 		var err error
-		if reflect.TypeOf(config).Kind() == reflect.Ptr {
+		if reflect.TypeOf(config).Kind() == reflect.Pointer {
 			err = env.ParseWithOptions(config, opts)
 		} else {
 			err = env.ParseWithOptions(&config, opts)

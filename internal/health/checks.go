@@ -93,8 +93,9 @@ func (c *checkSet) build() {
 }
 
 func newChecker(logger *zap.Logger, checks []Check) health.Checker {
-	options := []health.CheckerOption{
-		health.WithTimeout(5 * time.Second),
+	options := make([]health.CheckerOption, 0, 3+len(checks))
+	options = append(options,
+		health.WithTimeout(5*time.Second),
 		health.WithStatusListener(func(ctx context.Context, state health.CheckerState) {
 			switch state.Status {
 			case health.StatusDown:
@@ -123,7 +124,7 @@ func newChecker(logger *zap.Logger, checks []Check) health.Checker {
 				return result
 			}
 		}),
-	}
+	)
 
 	for _, check := range checks {
 		options = append(options, health.WithCheck(check))

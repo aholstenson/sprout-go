@@ -113,7 +113,8 @@ type loggingTraceExporter struct {
 func (e *loggingTraceExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
 	for _, span := range spans {
 		// Collect the the context as fields
-		fields := []zap.Field{
+		fields := make([]zap.Field, 0, 7+len(span.Attributes()))
+		fields = append(fields,
 			zap.String("traceID", span.SpanContext().TraceID().String()),
 			zap.String("spanID", span.SpanContext().SpanID().String()),
 			zap.String("parentSpanID", span.Parent().SpanID().String()),
@@ -121,7 +122,7 @@ func (e *loggingTraceExporter) ExportSpans(ctx context.Context, spans []sdktrace
 			zap.Time("startTime", span.StartTime()),
 			zap.Duration("duration", span.EndTime().Sub(span.StartTime())),
 			zap.Namespace("attributes"),
-		}
+		)
 
 		// Add the attributes as fields
 		for _, attr := range span.Attributes() {
