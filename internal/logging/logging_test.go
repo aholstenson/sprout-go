@@ -333,6 +333,36 @@ var _ = Describe("Logging", func() {
 				}
 				Expect(debugFound).To(BeTrue())
 			})
+
+			It("should use the level of the parent of a name with dots", func() {
+				t := GinkgoT()
+				t.Setenv("LOG_LEVEL", "error")
+				t.Setenv("LOG_LEVEL_DB", "debug")
+
+				core, logs := observer.New(zapcore.DebugLevel)
+				rootLogger := zap.New(core)
+
+				logger := logging.CreateLogger(rootLogger, []string{"db.pool"})
+
+				logger.Debug("debug from pool")
+
+				Expect(logs.FilterMessage("debug from pool").Len()).To(Equal(1))
+			})
+
+			It("should replace characters that cannot be in a variable name", func() {
+				t := GinkgoT()
+				t.Setenv("LOG_LEVEL", "error")
+				t.Setenv("LOG_LEVEL_MY_MODULE", "debug")
+
+				core, logs := observer.New(zapcore.DebugLevel)
+				rootLogger := zap.New(core)
+
+				logger := logging.CreateLogger(rootLogger, []string{"my-module"})
+
+				logger.Debug("debug from module")
+
+				Expect(logs.FilterMessage("debug from module").Len()).To(Equal(1))
+			})
 		})
 
 		Describe("Integration with Different Logger Types", func() {

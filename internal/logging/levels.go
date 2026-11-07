@@ -11,10 +11,15 @@ import (
 // variables like LOG_LEVEL_NAMEPART1_NAMEPART2, LOG_LEVEL_NAMEPART1 etc.
 // Lastly checking LOG_LEVEL for the root logger.
 //
+// A dot in a name part also separates parts, so the logger "db.pool" checks
+// LOG_LEVEL_DB_POOL and then LOG_LEVEL_DB, the same as the parts "db" and
+// "pool".
+//
 // If no environment variable is found, it returns the INFO level.
 func determineLevel(name []string) zapcore.Level {
-	for i := len(name); i > 0; i-- {
-		level := levelFromEnv(name[:i])
+	parts := splitName(name)
+	for i := len(parts); i > 0; i-- {
+		level := levelFromEnv(parts[:i])
 		if level != zapcore.InvalidLevel {
 			return level
 		}
@@ -32,9 +37,32 @@ func determineLevel(name []string) zapcore.Level {
 	return zapcore.InfoLevel
 }
 
-// levelFromEnv returns the log level from the environment variable
+// splitName splits the parts of a logger name at each dot and removes empty
+// parts.
+func splitName(name []string) []string {
+	parts := make([]string, 0, len(name))
+	for _, part := range name {
+		for _, subPart := range strings.Split(part, ".") {
+			if subPart != "" {
+				parts = append(parts, subPart)
+			}
+		}
+	}
+
+	return parts
+}
+
+// levelFromEnv returns the log level from the environment variable for the
+// name parts. A character that cannot be in a shell variable name, such as
+// "-", becomes "_", so the logger "my-module" uses LOG_LEVEL_MY_MODULE.
 func levelFromEnv(name []string) zapcore.Level {
-	levelName := "LOG_LEVEL_" + strings.ReplaceAll(strings.ToUpper(strings.Join(name, "_")), ".", "_")
+	levelName := "LOG_LEVEL_" + strings.Map(func(r rune) rune {
+		if (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
+			return r
+		}
+
+		return '_'
+	}, strings.ToUpper(strings.Join(name, "_")))
 	value := os.Getenv(levelName)
 	if value == "" {
 		return zapcore.InvalidLevel

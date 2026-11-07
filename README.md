@@ -185,7 +185,9 @@ Accepted values: `debug`, `info`, `warn`, `error`, `dpanic`, `panic`, `fatal`.
 To build the variable name, take the parts of the logger name, join them with
 `_`, replace every `.` with `_`, and put the result in upper case after
 `LOG_LEVEL_`. A logger created with `sprout.Logger("database", "connection")`
-is therefore set with `LOG_LEVEL_DATABASE_CONNECTION`.
+is therefore set with `LOG_LEVEL_DATABASE_CONNECTION`. Each character that is
+not a letter, digit or `_`, such as `-`, also becomes `_`, so the logger
+`my-module` is set with `LOG_LEVEL_MY_MODULE`.
 
 The most specific variable wins. A logger named `service.api.v1.endpoint` looks
 at `LOG_LEVEL_SERVICE_API_V1_ENDPOINT`, then `LOG_LEVEL_SERVICE_API_V1`, then
