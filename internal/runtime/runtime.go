@@ -31,9 +31,16 @@ func setupMemoryLimit(logger *zap.Logger) {
 		return
 	}
 
-	memLimit, err := memlimit.SetGoMemLimit(0.9)
+	memLimit, err := memlimit.Set(memlimit.WithRatio(0.9))
 	if err != nil {
 		logger.Info("Unable to set GOMEMLIMIT: " + err.Error())
+		return
+	}
+
+	// memlimit.Set returns math.MaxInt64 when the cgroup has no memory limit
+	// or when AUTOMEMLIMIT=off.
+	if memLimit == math.MaxInt64 {
+		logger.Info("No memory limit found, leaving GOMEMLIMIT unset")
 		return
 	}
 	logger.Info("Setting GOMEMLIMIT=" + formatBytes(memLimit))

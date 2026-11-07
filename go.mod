@@ -3,7 +3,7 @@ module github.com/aholstenson/sprout-go
 go 1.26.0
 
 require (
-	github.com/KimMachineGun/automemlimit v0.7.5
+	github.com/KimMachineGun/automemlimit v1.0.1
 	github.com/alexliesenfeld/health v0.8.1
 	github.com/caarlos0/env/v11 v11.4.2
 	github.com/go-logr/logr v1.4.4
