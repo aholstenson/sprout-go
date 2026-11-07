@@ -6,7 +6,6 @@ import (
 	"github.com/caarlos0/env/v11"
 	"go.opentelemetry.io/contrib/propagators/autoprop"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -126,33 +125,9 @@ func (e *loggingTraceExporter) ExportSpans(ctx context.Context, spans []sdktrace
 
 		// Add the attributes as fields
 		for _, attr := range span.Attributes() {
-			var value any
-
-			// Attributes come in some different types, so handle them for
-			// prettier logging
-			switch attr.Value.Type() {
-			case attribute.BOOL:
-				value = attr.Value.AsBool()
-			case attribute.INT64:
-				value = attr.Value.AsInt64()
-			case attribute.FLOAT64:
-				value = attr.Value.AsFloat64()
-			case attribute.STRING:
-				value = attr.Value.AsString()
-			case attribute.BOOLSLICE:
-				value = attr.Value.AsBoolSlice()
-			case attribute.STRINGSLICE:
-				value = attr.Value.AsStringSlice()
-			case attribute.INT64SLICE:
-				value = attr.Value.AsInt64Slice()
-			case attribute.FLOAT64SLICE:
-				value = attr.Value.AsFloat64Slice()
-			case attribute.INVALID:
-				// Fallback to using attr.Value directly
-				value = attr.Value
-			}
-
-			fields = append(fields, zap.Any(string(attr.Key), value))
+			// AsInterface gives the plain Go value for each attribute type,
+			// which logs more clearly than the attribute.Value struct.
+			fields = append(fields, zap.Any(string(attr.Key), attr.Value.AsInterface()))
 		}
 
 		// This exporter only exists when trace logging was asked for, so the
