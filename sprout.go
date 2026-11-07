@@ -54,13 +54,13 @@ func New(name string, version string) *Sprout {
 
 // With lets you specify Fx options to be used when creating the application.
 func (s *Sprout) With(options ...fx.Option) *fx.App {
-	logger := s.rootLogger.Logger()
-
 	allOptions := make([]fx.Option, 0, 6+len(options))
 	allOptions = append(allOptions,
+		// This Fx logger also releases the log outputs when the application
+		// ends, so that the last events are exported.
 		fx.WithLogger(func() fxevent.Logger {
 			fxLogLevel := os.Getenv("FX_ENABLE_DETAILED_LOGGING")
-			return logging.NewFxLogger(logger, fxLogLevel == "true")
+			return s.rootLogger.FxLogger(fxLogLevel == "true")
 		}),
 		fx.Supply(s.serviceInfo),
 		s.rootLogger.Module(),

@@ -17,22 +17,21 @@ var serviceInfo = internal.ServiceInfo{
 
 var _ = Describe("Logging", func() {
 	It("should not export when no endpoint is configured", func() {
-		provider, shutdown, err := otel.InitLogging(serviceInfo)
+		provider, err := otel.InitLogging(serviceInfo)
 
 		Expect(err).ToNot(HaveOccurred())
-		Expect(provider).ToNot(BeNil())
-		Expect(shutdown).To(BeNil())
+		Expect(provider).To(BeNil())
 	})
 
-	It("should return a shutdown function when an endpoint is configured", func() {
+	It("should return a provider when an endpoint is configured", func() {
 		GinkgoT().Setenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", "http://localhost:4317")
 
-		provider, shutdown, err := otel.InitLogging(serviceInfo)
+		provider, err := otel.InitLogging(serviceInfo)
 
 		Expect(err).ToNot(HaveOccurred())
 		Expect(provider).ToNot(BeNil())
-		Expect(shutdown).ToNot(BeNil())
 
-		Expect(shutdown(context.Background())).To(Succeed())
+		Expect(provider.ForceFlush(context.Background())).To(Succeed())
+		Expect(provider.Shutdown(context.Background())).To(Succeed())
 	})
 })

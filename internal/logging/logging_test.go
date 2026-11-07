@@ -541,11 +541,30 @@ var _ = Describe("Logging", func() {
 	})
 
 	Describe("Root Logger", func() {
-		It("should release what the logger writes to when the application stops", func() {
-			released := false
-			root := logging.NewRootLogger(zaptest.NewLogger(GinkgoT()), func(ctx context.Context) error {
-				released = true
-				return nil
+		// newApp creates an application that uses the root logger and its Fx
+		// logger, as sprout.New does.
+		newApp := func(root *logging.RootLogger, options ...fx.Option) *fx.App {
+			return fx.New(append([]fx.Option{
+				fx.WithLogger(func() fxevent.Logger {
+					return root.FxLogger(false)
+				}),
+				root.Module(),
+				fx.Invoke(fx.Annotate(func(*zap.Logger) {}, fx.ParamTags(`name:"logging.zap"`))),
+			}, options...)...)
+		}
+
+		It("should flush but not release when the application stops", func() {
+			flushed := 0
+			released := 0
+			root := logging.NewRootLogger(zaptest.NewLogger(GinkgoT()), logging.Outputs{
+				Flush: func(ctx context.Context) error {
+					flushed++
+					return nil
+				},
+				Release: func(ctx context.Context) error {
+					released++
+					return nil
+				},
 			})
 
 			var logger *zap.Logger
@@ -557,30 +576,105 @@ var _ = Describe("Logging", func() {
 			)
 
 			app.RequireStart()
-			Expect(released).To(BeFalse())
-
 			app.RequireStop()
-			Expect(released).To(BeTrue())
+
+			Expect(flushed).To(Equal(1))
+			Expect(released).To(Equal(0))
 		})
 
-		It("should report a failure to release", func() {
-			root := logging.NewRootLogger(zaptest.NewLogger(GinkgoT()), func(ctx context.Context) error {
-				return errors.New("unable to release")
+		It("should release after the application has stopped", func() {
+			released := 0
+			root := logging.NewRootLogger(zaptest.NewLogger(GinkgoT()), logging.Outputs{
+				Release: func(ctx context.Context) error {
+					released++
+					return nil
+				},
 			})
 
-			var logger *zap.Logger
-			app := fx.New(
-				root.Module(),
-				fx.Provide(logging.Logger("test")),
-				fx.Populate(&logger),
-			)
+			app := newApp(root)
 
 			ctx := context.Background()
 			Expect(app.Start(ctx)).To(Succeed())
-			Expect(app.Stop(ctx)).To(MatchError(ContainSubstring("unable to release")))
+			Expect(released).To(Equal(0))
+
+			Expect(app.Stop(ctx)).To(Succeed())
+			Expect(released).To(Equal(1))
 		})
 
-		It("should close the log file when the application stops", func() {
+		It("should release after a failed start has been logged", func() {
+			core, logs := observer.New(zapcore.DebugLevel)
+			loggedBeforeRelease := false
+			root := logging.NewRootLogger(zap.New(core), logging.Outputs{
+				Release: func(ctx context.Context) error {
+					loggedBeforeRelease = logs.FilterMessage("start failed").Len() == 1
+					return nil
+				},
+			})
+
+			app := newApp(root, fx.Invoke(func(lifecycle fx.Lifecycle) {
+				lifecycle.Append(fx.Hook{
+					OnStart: func(ctx context.Context) error {
+						return errors.New("unable to start")
+					},
+				})
+			}))
+
+			Expect(app.Start(context.Background())).To(MatchError(ContainSubstring("unable to start")))
+			Expect(loggedBeforeRelease).To(BeTrue())
+		})
+
+		It("should release after a failure to create the application has been logged", func() {
+			core, logs := observer.New(zapcore.DebugLevel)
+			loggedBeforeRelease := false
+			root := logging.NewRootLogger(zap.New(core), logging.Outputs{
+				Release: func(ctx context.Context) error {
+					loggedBeforeRelease = logs.FilterMessage("start failed").Len() == 1
+					return nil
+				},
+			})
+
+			app := newApp(root,
+				fx.Provide(func() (int, error) {
+					return 0, errors.New("unable to create")
+				}),
+				fx.Invoke(func(int) {}),
+			)
+			Expect(app.Err()).To(HaveOccurred())
+
+			Expect(app.Start(context.Background())).To(MatchError(ContainSubstring("unable to create")))
+			Expect(loggedBeforeRelease).To(BeTrue())
+		})
+
+		It("should release only once", func() {
+			released := 0
+			root := logging.NewRootLogger(zaptest.NewLogger(GinkgoT()), logging.Outputs{
+				Release: func(ctx context.Context) error {
+					released++
+					return errors.New("unable to release")
+				},
+			})
+
+			ctx := context.Background()
+			Expect(root.Release(ctx)).To(MatchError("unable to release"))
+			Expect(root.Release(ctx)).To(MatchError("unable to release"))
+			Expect(released).To(Equal(1))
+		})
+
+		It("should report a failure to flush", func() {
+			root := logging.NewRootLogger(zaptest.NewLogger(GinkgoT()), logging.Outputs{
+				Flush: func(ctx context.Context) error {
+					return errors.New("unable to flush")
+				},
+			})
+
+			app := newApp(root)
+
+			ctx := context.Background()
+			Expect(app.Start(ctx)).To(Succeed())
+			Expect(app.Stop(ctx)).To(MatchError(ContainSubstring("unable to flush")))
+		})
+
+		It("should close the log file after the application has stopped", func() {
 			t := GinkgoT()
 			path := filepath.Join(t.TempDir(), "app.log")
 			t.Setenv("LOG_FILE_OUTPUT", path)
@@ -591,16 +685,12 @@ var _ = Describe("Logging", func() {
 			root, err := logging.CreateRootLogger(internal.ServiceInfo{Name: "test", Version: "dev"})
 			Expect(err).ToNot(HaveOccurred())
 
-			var logger *zap.Logger
-			app := fxtest.New(
-				t,
-				root.Module(),
-				fx.Provide(logging.Logger("test")),
-				fx.Populate(&logger),
-			)
-			app.RequireStart()
+			app := newApp(root)
+
+			ctx := context.Background()
+			Expect(app.Start(ctx)).To(Succeed())
 			root.Logger().Info("written before stop")
-			app.RequireStop()
+			Expect(app.Stop(ctx)).To(Succeed())
 			root.Logger().Info("written after stop")
 
 			content, err := os.ReadFile(path) //nolint:gosec // The path is in the test's temporary directory.

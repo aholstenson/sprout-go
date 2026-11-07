@@ -173,6 +173,12 @@ fx.Provide(sprout.SlogLogger("example"), fx.Private)
 Sampling counts identical messages at the same level within a one second
 window. It applies to every output.
 
+When the application ends, Sprout writes the logs that are still buffered and
+then closes the log file and the OpenTelemetry log exporter. This also occurs
+when the application fails to start, so that the error is exported. The Fx
+logger of Sprout does this after the last Fx event. If you replace it with
+`fx.WithLogger`, Sprout only flushes the logs when the application stops.
+
 ### Log levels
 
 | Variable | Description | Default |

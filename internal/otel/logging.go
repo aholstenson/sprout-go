@@ -6,21 +6,19 @@ import (
 	"github.com/aholstenson/sprout-go/internal"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
-	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/log/noop"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 )
 
 // InitLogging initializes OpenTelemetry log exporting if configured.
 //
-// The returned function flushes the records that are still buffered and then
-// releases the exporter. It is nil when no exporter endpoint is configured,
-// in which case the returned provider discards all records.
+// It returns nil when no exporter endpoint is configured. Otherwise the caller
+// owns the returned provider: ForceFlush exports the records that are still
+// buffered, and Shutdown exports them and then releases the exporter.
 func InitLogging(
 	serviceInfo internal.ServiceInfo,
-) (log.LoggerProvider, func(ctx context.Context) error, error) {
+) (*sdklog.LoggerProvider, error) {
 	if !hasExporterEndpoint(moduleLogging) {
-		return noop.NewLoggerProvider(), nil, nil
+		return nil, nil //nolint:nilnil // A nil provider means that exporting is not configured.
 	}
 
 	resource, err := CreateResource(ServiceInfo{
@@ -30,12 +28,12 @@ func InitLogging(
 		Testing:     serviceInfo.Testing,
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	exporter, err := otlploggrpc.New(context.Background())
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	options := []sdklog.LoggerProviderOption{
@@ -46,5 +44,5 @@ func InitLogging(
 	provider := sdklog.NewLoggerProvider(options...)
 	otel.SetLoggerProvider(provider)
 
-	return provider, provider.Shutdown, nil
+	return provider, nil
 }

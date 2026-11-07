@@ -12,6 +12,7 @@ import (
 	"github.com/caarlos0/env/v11"
 	prettyconsole "github.com/thessem/zap-prettyconsole"
 	"go.opentelemetry.io/contrib/bridges/otelzap"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -64,10 +65,10 @@ func CreateRootLogger(serviceInfo internal.ServiceInfo) (_ *RootLogger, err erro
 	}
 
 	// Connect to OpenTelemetry
-	provider, otelShutdown, err := otel.InitLogging(serviceInfo)
+	provider, err := otel.InitLogging(serviceInfo)
 	if err != nil {
 		return nil, err
-	} else if otelShutdown != nil {
+	} else if provider != nil {
 		otelCore := otelzap.NewCore("global", otelzap.WithLoggerProvider(provider))
 		// Limit the otelzap core to info, so that debug logs are not exported
 		// even when a logger below is more verbose.
@@ -90,20 +91,25 @@ func CreateRootLogger(serviceInfo internal.ServiceInfo) (_ *RootLogger, err erro
 	// emits, and CreateLogger replaces it for each named logger.
 	core = withLevel(core, determineLevel(nil))
 
-	return NewRootLogger(zap.New(core, opts...), releaseOutputs(otelShutdown, file)), nil
+	return NewRootLogger(zap.New(core, opts...), newOutputs(provider, file)), nil
 }
 
-// releaseOutputs returns a function that releases the outputs that need it.
-// It returns nil when no output needs to be released.
-func releaseOutputs(otelShutdown func(ctx context.Context) error, file *logFile) func(ctx context.Context) error {
-	if otelShutdown == nil && file == nil {
-		return nil
+// newOutputs returns the operations that flush and release the OpenTelemetry
+// provider and the log file. Both may be nil.
+func newOutputs(provider *sdklog.LoggerProvider, file *logFile) Outputs {
+	var outputs Outputs
+	if provider != nil {
+		outputs.Flush = provider.ForceFlush
 	}
 
-	return func(ctx context.Context) error {
+	if provider == nil && file == nil {
+		return outputs
+	}
+
+	outputs.Release = func(ctx context.Context) error {
 		var errs []error
-		if otelShutdown != nil {
-			errs = append(errs, otelShutdown(ctx))
+		if provider != nil {
+			errs = append(errs, provider.Shutdown(ctx))
 		}
 
 		if file != nil {
@@ -112,6 +118,8 @@ func releaseOutputs(otelShutdown func(ctx context.Context) error, file *logFile)
 
 		return errors.Join(errs...)
 	}
+
+	return outputs
 }
 
 func createDevelopmentCore() zapcore.Core {
