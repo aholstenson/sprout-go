@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
 	"go.uber.org/fx/fxtest"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -472,6 +473,38 @@ var _ = Describe("Logging", func() {
 			Expect(verboseLogs.FilterMessage("debug message").Len()).To(Equal(1))
 			Expect(limitedLogs.FilterMessage("debug message").Len()).To(Equal(0))
 		})
+	})
+
+	Describe("Fx Logger", func() {
+		DescribeTable("should drop noisy events that have no error",
+			func(event fxevent.Event) {
+				core, logs := observer.New(zapcore.DebugLevel)
+				logger := logging.NewFxLogger(zap.New(core), false)
+
+				logger.LogEvent(event)
+
+				Expect(logs.Len()).To(Equal(0))
+			},
+			Entry("Provided", &fxevent.Provided{}),
+			Entry("Supplied", &fxevent.Supplied{}),
+			Entry("Decorated", &fxevent.Decorated{}),
+			Entry("Replaced", &fxevent.Replaced{}),
+		)
+
+		DescribeTable("should log noisy events that have an error",
+			func(event fxevent.Event) {
+				core, logs := observer.New(zapcore.DebugLevel)
+				logger := logging.NewFxLogger(zap.New(core), false)
+
+				logger.LogEvent(event)
+
+				Expect(logs.FilterLevelExact(zapcore.ErrorLevel).Len()).To(Equal(1))
+			},
+			Entry("Provided", &fxevent.Provided{Err: errors.New("failed")}),
+			Entry("Supplied", &fxevent.Supplied{Err: errors.New("failed")}),
+			Entry("Decorated", &fxevent.Decorated{Err: errors.New("failed")}),
+			Entry("Replaced", &fxevent.Replaced{Err: errors.New("failed")}),
+		)
 	})
 
 	Describe("Root Logger", func() {

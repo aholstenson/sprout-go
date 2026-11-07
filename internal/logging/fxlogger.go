@@ -56,6 +56,10 @@ func hasError(event fxevent.Event) bool {
 		return e.Err != nil
 	case *fxevent.Supplied:
 		return e.Err != nil
+	case *fxevent.Decorated:
+		return e.Err != nil
+	case *fxevent.Replaced:
+		return e.Err != nil
 	case *fxevent.Invoked:
 		return e.Err != nil
 	case *fxevent.Run:
