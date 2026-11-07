@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"time"
 
+	"github.com/aholstenson/sprout-go/internal"
 	"github.com/aholstenson/sprout-go/internal/logging"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
@@ -545,6 +548,35 @@ var _ = Describe("Logging", func() {
 			ctx := context.Background()
 			Expect(app.Start(ctx)).To(Succeed())
 			Expect(app.Stop(ctx)).To(MatchError(ContainSubstring("unable to release")))
+		})
+
+		It("should close the log file when the application stops", func() {
+			t := GinkgoT()
+			path := filepath.Join(t.TempDir(), "app.log")
+			t.Setenv("LOG_FILE_OUTPUT", path)
+			t.Setenv("LOG_CONSOLE_OUTPUT", "false")
+			t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+			t.Setenv("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", "")
+
+			root, err := logging.CreateRootLogger(internal.ServiceInfo{Name: "test", Version: "dev"})
+			Expect(err).ToNot(HaveOccurred())
+
+			var logger *zap.Logger
+			app := fxtest.New(
+				t,
+				root.Module(),
+				fx.Provide(logging.Logger("test")),
+				fx.Populate(&logger),
+			)
+			app.RequireStart()
+			root.Logger().Info("written before stop")
+			app.RequireStop()
+			root.Logger().Info("written after stop")
+
+			content, err := os.ReadFile(path) //nolint:gosec // The path is in the test's temporary directory.
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(content)).To(ContainSubstring("written before stop"))
+			Expect(string(content)).ToNot(ContainSubstring("written after stop"))
 		})
 
 		It("should stop when there is nothing to release", func() {
