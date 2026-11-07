@@ -8,6 +8,7 @@ import (
 	"github.com/aholstenson/sprout-go/internal/health"
 	"github.com/aholstenson/sprout-go/internal/logging"
 	"github.com/aholstenson/sprout-go/internal/runtime"
+	"github.com/aholstenson/sprout-go/internal/shutdown"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
@@ -54,7 +55,7 @@ func New(name string, version string) *Sprout {
 
 // With lets you specify Fx options to be used when creating the application.
 func (s *Sprout) With(options ...fx.Option) *fx.App {
-	allOptions := make([]fx.Option, 0, 6+len(options))
+	allOptions := make([]fx.Option, 0, 7+len(options))
 	allOptions = append(allOptions,
 		// This Fx logger also releases the log outputs when the application
 		// ends, so that the last events are exported.
@@ -68,10 +69,17 @@ func (s *Sprout) With(options ...fx.Option) *fx.App {
 		health.Module,
 	)
 	allOptions = append(allOptions, options...)
-	allOptions = append(allOptions, fx.Invoke(enableHealthServer))
+	allOptions = append(allOptions, shutdownOptions())
 	return fx.New(allOptions...)
 }
 
-func enableHealthServer(checks Health) {
-	// Do nothing, only here to make health server always start
+// shutdownOptions returns the options that make the application stop
+// gracefully. They must come after all other options, see shutdown.Options.
+func shutdownOptions() fx.Option {
+	cfg, err := shutdown.ReadConfig()
+	if err != nil {
+		return fx.Error(err)
+	}
+
+	return shutdown.Options(cfg)
 }

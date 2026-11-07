@@ -38,7 +38,7 @@ type ServiceInfo struct {
 	Testing     bool `name:"env:testing"`
 }
 
-func NewServer(lifecycle fx.Lifecycle, logger *zap.Logger, serviceInfo ServiceInfo, config Config) Checks {
+func NewServer(lifecycle fx.Lifecycle, logger *zap.Logger, serviceInfo ServiceInfo, config Config) *Server {
 	s := &Server{
 		logger:   logger,
 		httpPort: config.Port,
@@ -75,6 +75,18 @@ func (s *Server) AddLivenessCheck(check Check) {
 
 func (s *Server) AddReadinessCheck(check Check) {
 	s.readiness.add(check)
+}
+
+// MarkNotReady makes /readyz report that the service is unavailable, whatever
+// the result of the readiness checks. /healthz continues to run its checks, so
+// that the service is not restarted while it stops.
+//
+// The application calls this when it starts to stop. Load balancers then stop
+// sending new requests before the components stop.
+func (s *Server) MarkNotReady() {
+	if s.readiness.markStopping() {
+		s.logger.Info("Reporting not ready, as the application stops")
+	}
 }
 
 func (s *Server) Start(ctx context.Context) error {

@@ -20,6 +20,10 @@ type checkSet struct {
 	checks  []Check
 	checker health.Checker
 	handler http.HandlerFunc
+
+	// stopping is true when the application stops. The endpoint then reports
+	// that it is unavailable without running the checks.
+	stopping bool
 }
 
 func newCheckSet(logger *zap.Logger) *checkSet {
@@ -62,14 +66,29 @@ func (c *checkSet) stop() {
 	c.handler = nil
 }
 
+// markStopping makes the endpoint report that it is unavailable. It returns
+// false when the endpoint was already marked.
+func (c *checkSet) markStopping() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.stopping {
+		return false
+	}
+
+	c.stopping = true
+	return true
+}
+
 func (c *checkSet) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	c.mu.RLock()
 	handler := c.handler
+	stopping := c.stopping
 	c.mu.RUnlock()
 
-	if handler == nil {
+	if handler == nil || stopping {
 		// The HTTP server runs but the checks do not, which is the case while
-		// the application starts and after it has stopped.
+		// the application starts, while it stops and after it has stopped.
 		http.Error(writer, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
 		return
 	}

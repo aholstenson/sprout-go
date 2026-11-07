@@ -199,7 +199,8 @@ The most specific variable wins. A logger named `service.api.v1.endpoint` looks
 at `LOG_LEVEL_SERVICE_API_V1_ENDPOINT`, then `LOG_LEVEL_SERVICE_API_V1`, then
 `LOG_LEVEL_SERVICE_API`, then `LOG_LEVEL_SERVICE`, and last `LOG_LEVEL`.
 
-Sprout itself uses these logger names: `config`, `health`, `otel` and `fx`.
+Sprout itself uses these logger names: `config`, `health`, `otel`, `shutdown`
+and `fx`.
 
 ## Observability
 
@@ -357,6 +358,41 @@ var Module = fx.Module(
     return service
   }),
 )
+```
+
+## Shutdown
+
+When the application gets `SIGINT` or `SIGTERM`, it stops in this sequence:
+
+1. `/readyz` returns `503`, whatever the result of the readiness checks.
+   `/healthz` continues to run its checks, so that the service is not restarted
+   while it stops.
+2. The application waits for `SHUTDOWN_DELAY`.
+3. The components stop, in the reverse sequence of their start.
+
+The delay gives load balancers time to stop sending new requests before the
+components stop. In Kubernetes, a pod continues to get traffic for a short time
+after it starts to terminate, until all nodes and ingresses know that the pod
+is gone. A delay of 5 to 10 seconds is usually sufficient.
+
+`SHUTDOWN_TIMEOUT` limits the total time that the application can use to stop,
+the delay included. The delay must be shorter than the timeout. In Kubernetes,
+keep the timeout shorter than `terminationGracePeriodSeconds` of the pod, which
+is 30 seconds if you do not set it.
+
+| Variable | Description | Default |
+| -------- | ----------- | ------- |
+| `SHUTDOWN_DELAY` | Time to wait after `/readyz` starts to fail, before the components stop. For example `5s` | `0s` |
+| `SHUTDOWN_TIMEOUT` | Maximum time the application can take to stop, the delay included | `15s` |
+
+Example for Kubernetes:
+
+```yaml
+env:
+  - name: SHUTDOWN_DELAY
+    value: 5s
+  - name: SHUTDOWN_TIMEOUT
+    value: 25s
 ```
 
 ## Fx logging

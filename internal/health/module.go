@@ -10,5 +10,8 @@ var Module = fx.Module(
 	"sprout:health",
 	fx.Provide(config.Config("HEALTH_SERVER", Config{}), fx.Private),
 	fx.Provide(logging.Logger("health"), fx.Private),
-	fx.Provide(fx.Annotate(NewServer, fx.As(new(Checks)))),
+	// The server is provided as itself so that the application can control it
+	// when it stops, and as Checks for the modules that add checks.
+	fx.Provide(NewServer),
+	fx.Provide(func(server *Server) Checks { return server }),
 )
