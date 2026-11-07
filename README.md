@@ -440,7 +440,12 @@ it would bind a port that you did not ask for. Set `HEALTH_SERVER_ENABLED` to
 | Variable | Description | Default |
 | -------- | ----------- | ------- |
 | `HEALTH_SERVER_ENABLED` | Whether to start the health server | On outside of development and tests |
-| `HEALTH_SERVER_PORT` | The port that the health server listens on | `8088` |
+| `HEALTH_SERVER_PORT` | The port that the health server listens on, from `0` to `65535`. `0` selects a free port | `8088` |
+
+With `HEALTH_SERVER_PORT=0`, the operating system selects a free port when the
+server starts. Sprout logs it as `Health server got a free port` with a `port`
+field. Use this when you run more than one instance on the same host, for
+example when you enable the server in tests that run in parallel.
 
 Health checks are implemented using [Health](https://github.com/alexliesenfeld/health)
 with checks being defined via `sprout.HealthCheck` structs. Checks can then

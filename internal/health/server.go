@@ -3,9 +3,11 @@ package health
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"go.uber.org/fx"
@@ -17,8 +19,18 @@ type Config struct {
 	// When not explicitly set, defaults to true in production and false in
 	// development and in tests.
 	Enabled *bool `env:"ENABLED"`
-	// Port is the port to bind to
+	// Port is the port to bind to. 0 lets the operating system select a free
+	// port, see Server.Port.
 	Port int `env:"PORT" envDefault:"8088"`
+}
+
+// Validate makes sure that the port is in the range of TCP ports.
+func (c Config) Validate() error {
+	if c.Port < 0 || c.Port > 65535 {
+		return fmt.Errorf("HEALTH_SERVER_PORT must be from 0 to 65535, got %d", c.Port)
+	}
+
+	return nil
 }
 
 type Server struct {
@@ -26,6 +38,10 @@ type Server struct {
 
 	httpServer *http.Server
 	httpPort   int
+
+	// boundPort is the port that the server listens on, or 0 when it does
+	// not run.
+	boundPort atomic.Int32
 
 	liveness  *checkSet
 	readiness *checkSet
@@ -102,6 +118,15 @@ func (s *Server) Start(ctx context.Context) error {
 		return err
 	}
 
+	// The port can be different from the configured port, when the configured
+	// port is 0.
+	if addr, ok := ln.Addr().(*net.TCPAddr); ok {
+		s.boundPort.Store(int32(addr.Port)) //nolint:gosec // A TCP port is at most 65535.
+		if s.httpPort == 0 {
+			s.logger.Info("Health server got a free port", zap.Int("port", addr.Port))
+		}
+	}
+
 	s.liveness.start()
 	s.readiness.start()
 
@@ -127,9 +152,16 @@ func (s *Server) Stop(ctx context.Context) error {
 	defer cancel()
 
 	err := s.httpServer.Shutdown(ctx)
+	s.boundPort.Store(0)
 
 	s.liveness.stop()
 	s.readiness.stop()
 
 	return err
+}
+
+// Port returns the port that the server listens on. It is 0 when the server
+// does not run, for example because it is disabled or has stopped.
+func (s *Server) Port() int {
+	return int(s.boundPort.Load())
 }
