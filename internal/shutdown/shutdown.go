@@ -29,15 +29,15 @@ type Config struct {
 	Timeout time.Duration `env:"TIMEOUT" envDefault:"15s"`
 }
 
-// ReadConfig reads the configuration from the SHUTDOWN_ variables and
-// validates it.
+// ReadConfig reads the configuration from the SHUTDOWN_ variables. The
+// configuration is validated as it is read, see Config.Validate.
 func ReadConfig() (Config, error) {
 	cfg, err := config.ReadConfig[Config]("SHUTDOWN")
 	if err != nil {
 		return cfg, fmt.Errorf("failed to load shutdown configuration: %w", err)
 	}
 
-	return cfg, cfg.Validate()
+	return cfg, nil
 }
 
 // Validate returns an error when the values cannot work together.

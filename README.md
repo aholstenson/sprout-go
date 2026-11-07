@@ -124,6 +124,39 @@ var Module = fx.Module(
 )
 ```
 
+### Validation
+
+A configuration struct can check its own values. Give it a `Validate() error`
+method (the `sprout.ConfigValidator` interface). Sprout calls it after it has
+read the values, and only when the values were read without errors. The method
+can have a value or a pointer receiver. `sprout.Config`, `sprout.BindConfig`
+and `sprout.ReadConfig` all call it.
+
+If `Validate` returns an error, the application does not start, and Sprout logs
+`Configuration is not valid` with the type and the error. To report more than
+one problem, return them with `errors.Join`. Sprout then logs each problem on
+its own line.
+
+Example:
+
+```go
+type Config struct {
+  MinConns int `env:"MIN_CONNS" envDefault:"1"`
+  MaxConns int `env:"MAX_CONNS" envDefault:"10"`
+}
+
+func (c Config) Validate() error {
+  if c.MinConns > c.MaxConns {
+    return errors.New("MIN_CONNS must not be more than MAX_CONNS")
+  }
+  return nil
+}
+```
+
+Sprout validates only the struct that it reads. If the struct contains other
+structs that have a `Validate` method, call them from the `Validate` of the
+outer struct.
+
 ## Logging
 
 Sprout provides logging via [Zap](https://github.com/uber-go/zap) and
