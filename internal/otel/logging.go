@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/aholstenson/sprout-go/internal"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/noop"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 )
@@ -44,7 +44,7 @@ func InitLogging(
 	}
 
 	provider := sdklog.NewLoggerProvider(options...)
-	global.SetLoggerProvider(provider)
+	otel.SetLoggerProvider(provider)
 
 	return provider, provider.Shutdown, nil
 }

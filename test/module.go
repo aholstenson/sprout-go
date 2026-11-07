@@ -5,7 +5,6 @@ import (
 	"github.com/aholstenson/sprout-go/internal/health"
 	"github.com/aholstenson/sprout-go/internal/logging"
 	"go.opentelemetry.io/otel"
-	logglobal "go.opentelemetry.io/otel/log/global"
 	lognoop "go.opentelemetry.io/otel/log/noop"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
@@ -54,7 +53,7 @@ func Module(t TB) fx.Option {
 		fx.Invoke(setupNoopOtel),
 		fx.Provide(otel.GetTracerProvider),
 		fx.Provide(otel.GetMeterProvider),
-		fx.Provide(logglobal.GetLoggerProvider),
+		fx.Provide(otel.GetLoggerProvider),
 		health.Module,
 	)
 }
@@ -62,5 +61,5 @@ func Module(t TB) fx.Option {
 func setupNoopOtel() {
 	otel.SetTracerProvider(tracenoop.NewTracerProvider())
 	otel.SetMeterProvider(metricnoop.NewMeterProvider())
-	logglobal.SetLoggerProvider(lognoop.NewLoggerProvider())
+	otel.SetLoggerProvider(lognoop.NewLoggerProvider())
 }
