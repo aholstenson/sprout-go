@@ -4,7 +4,7 @@
 [tools]
 go = "1.26.10"
 ginkgo = "2.28.1"
-golangci-lint = "2.7.2"
+golangci-lint = "2.15.0"
 goreleaser = "1.17.2"
 pre-commit = "4"
 
