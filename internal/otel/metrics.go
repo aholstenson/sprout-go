@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -19,23 +19,47 @@ func SetupMetrics(
 	lifecycle fx.Lifecycle,
 	logger *zap.Logger,
 ) (metric.MeterProvider, error) {
-	if !hasExporterEndpoint(moduleMetrics) {
-		// If no endpoint is set, we don't want to send any metrics to the
-		// collector
-		logger.Warn("No metrics exporter endpoint set, disabling metrics")
-		return noopMetrics()
-	}
-
-	exporter, err := otlpmetricgrpc.New(context.Background())
+	config, err := readSignalConfig(moduleMetrics, false)
 	if err != nil {
 		return nil, err
 	}
 
-	logger.Info("Metrics enabled")
-	provider := sdkmetric.NewMeterProvider(
-		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter)),
+	if !config.enabled() {
+		logger.Warn("Metrics disabled", zap.String("reason", config.DisabledReason))
+		return noopMetrics()
+	}
+
+	options := []sdkmetric.Option{
 		sdkmetric.WithResource(resource),
+	}
+
+	if config.OTLP {
+		exporter, err := newMetricExporter(context.Background(), config.Protocol)
+		if err != nil {
+			return nil, err
+		}
+
+		options = append(options, sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter)))
+	}
+
+	if config.Console {
+		// The console exporter writes each collection as one line of JSON to
+		// stdout.
+		exporter, err := stdoutmetric.New()
+		if err != nil {
+			return nil, err
+		}
+
+		options = append(options, sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exporter)))
+	}
+
+	logger.Info(
+		"Metrics enabled",
+		zap.Bool("otlp", config.OTLP),
+		zap.String("protocol", string(config.Protocol)),
+		zap.Bool("console", config.Console),
 	)
+	provider := sdkmetric.NewMeterProvider(options...)
 	otel.SetMeterProvider(provider)
 
 	lifecycle.Append(fx.Hook{

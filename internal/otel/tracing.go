@@ -6,7 +6,6 @@ import (
 	"github.com/caarlos0/env/v11"
 	"go.opentelemetry.io/contrib/propagators/autoprop"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -15,11 +14,16 @@ import (
 	"go.uber.org/zap"
 )
 
+// traceConfig holds the variables that Sprout used before it supported the
+// standard OpenTelemetry variables. They continue to work, but the standard
+// variables have priority.
 type traceConfig struct {
-	// Log is a flag that enables logging of traces.
+	// Log is a flag that writes traces to the log. It is used only when
+	// OTEL_TRACES_EXPORTER is not set.
 	Log bool `env:"LOG" envDefault:"false"`
 
-	// SampleRate is the rate at which traces should be sampled.
+	// SampleRate is the rate at which traces should be sampled. It is used
+	// only when OTEL_TRACES_SAMPLER is not set.
 	SampleRate float64 `env:"SAMPLE_RATE" envDefault:"1.0"`
 }
 
@@ -32,40 +36,59 @@ func SetupTracing(
 	// Set a better default for propagators, since the default is a no-op
 	otel.SetTextMapPropagator(autoprop.NewTextMapPropagator())
 
-	// Load the tracing configuration
-	config, err := env.ParseAsWithOptions[traceConfig](env.Options{
+	legacy, err := env.ParseAsWithOptions[traceConfig](env.Options{
 		Prefix: "OTEL_TRACING_",
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	var exportingOption sdktrace.TracerProviderOption
+	config, err := readSignalConfig(moduleTracing, legacy.Log)
+	if err != nil {
+		return nil, err
+	}
 
-	// Get the sample rate and validate that tracing is enabled
-	sampleRate := config.SampleRate
+	if config.ExporterSet && legacy.Log {
+		logger.Warn("OTEL_TRACING_LOG is ignored because OTEL_TRACES_EXPORTER is set")
+	}
 
-	if sampleRate <= 0 {
+	if config.SDKDisabled {
+		logger.Warn("Tracing disabled", zap.String("reason", config.DisabledReason))
+		return noopTracing()
+	}
+
+	// The sampler is read also when no exporter is set, so that an incorrect
+	// value is found before an exporter is set.
+	sampler, err := readSampler(logger, legacy.SampleRate)
+	if err != nil {
+		return nil, err
+	}
+
+	if !config.enabled() {
+		logger.Warn("Tracing disabled", zap.String("reason", config.DisabledReason))
+		return noopTracing()
+	}
+
+	if sampler == nil {
 		logger.Warn("Sample rate is less than or equal to 0, disabling tracing")
 		return noopTracing()
 	}
 
-	if config.Log {
-		// If tracing development mode is enabled, we want to log the
-		// traces
-		logger.Info("Traces enabled for development mode, logging traces")
-		exportingOption = sdktrace.WithSyncer(&loggingTraceExporter{
-			logger: logger.Named("trace"),
-		})
-	} else {
-		if !hasExporterEndpoint(moduleTracing) {
-			logger.Warn("No tracing exporter endpoint set, disabling tracing")
-			return noopTracing()
-		}
+	options := []sdktrace.TracerProviderOption{
+		sdktrace.WithResource(resource),
+		sdktrace.WithSampler(sampler),
+	}
 
-		// TODO: Load config and error if not set correctly
-		exporter := otlptracegrpc.NewUnstarted()
-		exportingOption = sdktrace.WithBatcher(exporter)
+	if config.Console {
+		logger.Info("Writing traces to the log")
+		options = append(options, sdktrace.WithSyncer(&loggingTraceExporter{
+			logger: logger.Named("trace"),
+		}))
+	}
+
+	if config.OTLP {
+		exporter := newTraceExporter(config.Protocol)
+		options = append(options, sdktrace.WithBatcher(exporter))
 
 		lifecycle.Append(fx.Hook{
 			OnStart: func(ctx context.Context) error {
@@ -74,20 +97,14 @@ func SetupTracing(
 		})
 	}
 
-	var sampler sdktrace.Sampler
-	if sampleRate >= 1 {
-		// If the sample rate is 1 or more, we always sample
-		sampler = sdktrace.ParentBased(sdktrace.AlwaysSample())
-	} else {
-		sampler = sdktrace.ParentBased(sdktrace.TraceIDRatioBased(sampleRate))
-	}
-
-	logger.Info("Tracing enabled", zap.Float64("rate", sampleRate))
-	tp := sdktrace.NewTracerProvider(
-		exportingOption,
-		sdktrace.WithResource(resource),
-		sdktrace.WithSampler(sampler),
+	logger.Info(
+		"Tracing enabled",
+		zap.String("sampler", sampler.Description()),
+		zap.Bool("otlp", config.OTLP),
+		zap.String("protocol", string(config.Protocol)),
+		zap.Bool("console", config.Console),
 	)
+	tp := sdktrace.NewTracerProvider(options...)
 	otel.SetTracerProvider(tp)
 
 	lifecycle.Append(fx.Hook{
@@ -130,8 +147,8 @@ func (e *loggingTraceExporter) ExportSpans(ctx context.Context, spans []sdktrace
 			fields = append(fields, zap.Any(string(attr.Key), attr.Value.AsInterface()))
 		}
 
-		// This exporter only exists when trace logging was asked for, so the
-		// spans are logged at info and need no further opt-in.
+		// This exporter only exists when console output of traces was asked
+		// for, so the spans are logged at info and need no further opt-in.
 		e.logger.Info(span.Name(), fields...)
 	}
 

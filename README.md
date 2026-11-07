@@ -65,7 +65,7 @@ to `true`. This is intended for local development. It pretty prints logs to
 stderr and keeps the health server off.
 
 Development mode does not control OTLP exporting. Traces, metrics and logs are
-only exported when an endpoint is configured, in any mode. See
+only exported when an endpoint or an exporter is configured, in any mode. See
 [Observability](#observability).
 
 | Variable | Description | Default |
@@ -243,25 +243,86 @@ This decouples the application from the telemetry backend, allowing for easy
 migration to other backends.
 
 The following environment variables are used to configure the OpenTelemetry
-integration:
+integration. `<SIGNAL>` is `TRACES`, `METRICS` or `LOGS`.
 
 | Variable | Description | Default |
 | -------- | ----------- | ------- |
+| `OTEL_SDK_DISABLED` | Set to `true` to turn off traces, metrics and logs. Sprout then ignores the exporter, protocol and sampler variables | `false` |
+| `OTEL_TRACES_EXPORTER` | Where to send traces: `otlp`, `console` or `none`. Use a comma to set more than one, such as `otlp,console` | see below |
+| `OTEL_METRICS_EXPORTER` | Where to send metrics: `otlp`, `console` or `none` | see below |
+| `OTEL_LOGS_EXPORTER` | Where to send logs: `otlp`, `console` or `none` | see below |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | The OTLP protocol: `grpc` or `http/protobuf` | `grpc` |
+| `OTEL_EXPORTER_OTLP_<SIGNAL>_PROTOCOL` | The OTLP protocol for one signal, overrides `OTEL_EXPORTER_OTLP_PROTOCOL` | |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | The endpoint to send traces, metrics and logs to | |
+| `OTEL_EXPORTER_OTLP_<SIGNAL>_ENDPOINT` | The endpoint for one signal, overrides `OTEL_EXPORTER_OTLP_ENDPOINT` | |
+| `OTEL_EXPORTER_OTLP_TIMEOUT` | The timeout in milliseconds for sending data | `10000` |
+| `OTEL_EXPORTER_OTLP_<SIGNAL>_TIMEOUT` | The timeout for one signal, overrides `OTEL_EXPORTER_OTLP_TIMEOUT` | |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Headers to send with each request, such as `api-key=secret` | |
+| `OTEL_EXPORTER_OTLP_<SIGNAL>_HEADERS` | Headers for one signal, overrides `OTEL_EXPORTER_OTLP_HEADERS` | |
+| `OTEL_METRIC_EXPORT_INTERVAL` | The interval in milliseconds to export metrics | `60000` |
+| `OTEL_METRIC_EXPORT_TIMEOUT` | The timeout in milliseconds for exporting metrics | `30000` |
+| `OTEL_TRACES_SAMPLER` | The sampler for traces, see [Sampling](#sampling) | `parentbased_always_on` |
+| `OTEL_TRACES_SAMPLER_ARG` | The ratio for `traceidratio` and `parentbased_traceidratio`, between 0 and 1 | `1.0` |
 | `OTEL_PROPAGATORS` | The default propagators to use | `tracecontext,baggage` |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | The endpoint to send traces, metrics and logs to |  |
-| `OTEL_EXPORTER_OTLP_TIMEOUT` | The timeout in seconds for sending data | `10` |
-| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Custom endpoint to send traces to, overrides `OTEL_EXPORTER_OTLP_ENDPOINT` |  |
-| `OTEL_EXPORTER_OTLP_TRACES_TIMEOUT` | Custom timeout in seconds for sending traces | `10` |
-| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Custom endpoint to send metrics to, overrides `OTEL_EXPORTER_OTLP_ENDPOINT` |  |
-| `OTEL_EXPORTER_OTLP_METRICS_TIMEOUT` | Custom timeout in seconds for sending metrics | `10` |
-| `OTEL_METRIC_EXPORT_INTERVAL` | The interval in seconds to export metrics | `60` |
-| `OTEL_METRIC_EXPORT_TIMEOUT` | The timeout in seconds for exporting metrics | `30` |
-| `OTEL_TRACING_LOG` | Enable logging mode for tracing | `false` |
-| `OTEL_TRACING_SAMPLE_RATE` | Part of the traces to sample, between 0 and 1. `0` or less turns tracing off. `1` or more samples everything. The decision follows the parent span when there is one | `1.0` |
+| `OTEL_RESOURCE_ATTRIBUTES` | More resource attributes, such as `deployment.environment=prod` | |
+| `OTEL_TRACING_LOG` | Older name for `OTEL_TRACES_EXPORTER=console`. Ignored when `OTEL_TRACES_EXPORTER` is set | `false` |
+| `OTEL_TRACING_SAMPLE_RATE` | Older way to set the sampler. Ignored when `OTEL_TRACES_SAMPLER` is set, see [Sampling](#sampling) | `1.0` |
 
-OTLP exporting is disabled by default. You can enable logging of traces which
-can be useful for development by setting the `OTEL_TRACING_LOG` environment 
-variable to `true`.
+Sprout stops at startup with an error that names the variable when a value
+is not valid, such as an unknown protocol, exporter or sampler.
+
+### Exporters
+
+When `OTEL_<SIGNAL>_EXPORTER` is not set, Sprout exports the signal with OTLP
+only when `OTEL_EXPORTER_OTLP_ENDPOINT` or `OTEL_EXPORTER_OTLP_<SIGNAL>_ENDPOINT`
+is set. Without an endpoint the signal is not exported. Thus OTLP exporting is
+off by default.
+
+When `OTEL_<SIGNAL>_EXPORTER` is set, it decides:
+
+* `otlp` sends the signal with OTLP. Without an endpoint the exporter uses the
+  default endpoint of the protocol: `localhost:4317` for `grpc` and
+  `localhost:4318` for `http/protobuf`.
+* `console` writes the signal to the console:
+  * Traces go to the Sprout log at info level with the logger name
+    `otel.trace`. Each span is one log entry.
+  * Metrics go to stdout as JSON, one line for each export interval.
+  * Logs go to stdout as JSON, one line for each OpenTelemetry log record.
+    The normal log output to stderr continues.
+* `none` does not export the signal, also when an endpoint is set.
+
+The OTLP protocol is `grpc` by default. The OpenTelemetry specification
+recommends `http/protobuf` as the default, but Sprout keeps `grpc` so that
+applications that use gRPC today continue to work. Set
+`OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf` to use HTTP. With HTTP, the
+endpoint in `OTEL_EXPORTER_OTLP_ENDPOINT` is a base URL such as
+`http://collector:4318`, and the exporters add the path for each signal, such
+as `/v1/traces`. `http/json` is not supported.
+
+To write traces to the log during development, set `OTEL_TRACES_EXPORTER` to
+`console`:
+
+```sh
+DEVELOPMENT=true OTEL_TRACES_EXPORTER=console go run .
+```
+
+### Sampling
+
+`OTEL_TRACES_SAMPLER` accepts these values:
+
+| Value | Description |
+| ----- | ----------- |
+| `always_on` | Sample all traces |
+| `always_off` | Sample no traces |
+| `traceidratio` | Sample the part of the traces that `OTEL_TRACES_SAMPLER_ARG` gives |
+| `parentbased_always_on` | Follow the parent span. Sample all traces that have no parent |
+| `parentbased_always_off` | Follow the parent span. Sample no traces that have no parent |
+| `parentbased_traceidratio` | Follow the parent span. For traces that have no parent, sample the part that `OTEL_TRACES_SAMPLER_ARG` gives |
+
+When `OTEL_TRACES_SAMPLER` is not set, Sprout uses `OTEL_TRACING_SAMPLE_RATE`
+as the ratio of a parent-based sampler. `1` or more samples all traces. `0` or
+less turns tracing off. When both variables are set, `OTEL_TRACES_SAMPLER`
+wins and Sprout logs a warning.
 
 ### Tracing
 
@@ -318,6 +379,51 @@ var Module = fx.Module(
   })
 )
 ```
+
+### Testing telemetry
+
+`test.Module` sets up an application for tests. It records spans and metrics
+in memory, so that a test can examine them. Get the recorders with
+`fx.Populate`:
+
+* `*tracetest.SpanRecorder` records all spans. `Ended` returns the spans that
+  have ended.
+* `*sdkmetric.ManualReader` collects the metrics when the test calls `Collect`.
+
+```go
+var recorder *tracetest.SpanRecorder
+var reader *sdkmetric.ManualReader
+
+app := fxtest.New(
+  t,
+  test.Module(t),
+  myModule,
+  fx.Populate(&recorder, &reader),
+)
+app.RequireStart()
+defer app.RequireStop()
+
+// Run the code under test, then examine the telemetry.
+spans := recorder.Ended()
+
+var rm metricdata.ResourceMetrics
+err := reader.Collect(context.Background(), &rm)
+```
+
+Options change the test application:
+
+| Option | Description |
+| ------ | ----------- |
+| `test.WithServiceName(name)` | Set the service name. The default is `test` |
+| `test.WithServiceVersion(version)` | Set the service version. The default is `dev` |
+| `test.WithNoopTelemetry()` | Use providers that do nothing and do not provide the recorders. Use it for benchmarks, as the span recorder keeps all spans in memory |
+
+Each call to `test.Module` creates new providers and recorders. It does not
+change the OpenTelemetry globals, so tests that run in parallel do not share
+telemetry. Code that gets a tracer or a meter from the globals, such as with
+`otel.Tracer`, does not send telemetry to the recorders. Get the
+`trace.TracerProvider` and the `metric.MeterProvider` from Fx instead. Logs
+are not recorded.
 
 ## Health checks
 
